@@ -21,7 +21,7 @@ begin
       begin
         if Assigned(u.Message) and Assigned(u.Message.Chat) then
         begin
-          var Text := Format('Ïîø¸ë íàõóé, %s %s!', [u.Message.Chat.FirstName, u.Message.Chat.LastName]);
+          var Text := Format('Пошёл нахуй, %s %s!', [u.Message.Chat.FirstName, u.Message.Chat.LastName]);
           TtgClient.SendMessageToChat(u.Message.Chat.Id, Text);
         end;
       end;
@@ -32,4 +32,5 @@ begin
     on E: Exception do Writeln('Error: ' + E.Message);
   end;
 end.
+
 ```
