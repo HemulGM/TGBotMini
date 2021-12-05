@@ -8,7 +8,15 @@ begin
   ReportMemoryLeaksOnShutdown := True;
   TtgClient.BASE_URL := 'https://api.telegram.org/bot';
   TtgClient.TOKEN := {$INCLUDE BOT_TOKEN.key};
-  Writeln('Telegram Bot Mini API Inited');
+  Write('Telegram Bot Mini API Inited');
+  //Bot Name
+  with TtgClient.GetMe do
+  try
+    if Ok then Writeln(' - ', Result.Username);
+  finally
+    Free;
+  end;
+  //LongPoll
   while True do
   try
     var Updates: TtgUpdates := TtgClient.GetUpdates;

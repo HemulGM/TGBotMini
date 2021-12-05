@@ -86,6 +86,8 @@ type
     destructor Destroy; override;
   end;
 
+  TtgUserResponse = TtgResponse<TtgUser>;
+
   TtgMessageResponse = class(TtgResponse<TtgMessage>)
   private
     Fok: Boolean;
@@ -163,6 +165,7 @@ type
     //
     class procedure SendMessageToChat(ChatId: Int64; const Text: string); static;
     class function GetUpdates: TtgUpdates;
+    class function GetMe: TtgUserResponse; static;
   end;
 
 implementation
@@ -172,6 +175,11 @@ uses
 
 { TtgClient }
 
+class function TtgClient.GetMe: TtgUserResponse;
+begin
+  Get(Result, 'getMe');
+end;
+
 class procedure TtgClient.SendMessageToChat(ChatId: Int64; const Text: string);
 begin
   var Message := TtgMessageNew.Create;
@@ -179,7 +187,7 @@ begin
     Message.ChatId := ChatId;
     Message.Text := Text;
     var Resp: TtgMessageResponse := nil;
-    TtgClient.Get(Resp, 'sendMessage', Message.ToString);
+    Get(Resp, 'sendMessage', Message.ToString);
     Resp.Free;
   finally
     Message.Free;
