@@ -1,4 +1,4 @@
-program TGBotMini;
+ï»¿program TGBotMini;
 
 uses
   System.SysUtils,
@@ -17,7 +17,7 @@ begin
       begin
         if Assigned(u.Message) and Assigned(u.Message.Chat) then
         begin
-          var Text := Format('Ïîø¸ë íàõóé, %s %s!', [u.Message.Chat.FirstName, u.Message.Chat.LastName]);
+          var Text := Format('ĞŸĞ¾ÑˆÑ‘Ğ» Ğ½Ğ°Ñ…ÑƒĞ¹, %s %s!', [u.Message.Chat.FirstName, u.Message.Chat.LastName]);
           TtgClient.SendMessageToChat(u.Message.Chat.Id, Text);
         end;
       end;

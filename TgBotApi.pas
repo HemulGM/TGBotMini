@@ -1,4 +1,4 @@
-unit TgBotApi;
+﻿unit TgBotApi;
 
 interface
 
