@@ -25,6 +25,10 @@ begin
       begin
         if Assigned(u.Message) and Assigned(u.Message.Chat) then
         begin
+<<<<<<< Updated upstream
+=======
+          Writeln('Message: ', u.Message.Text, '. Answer to: ', u.Message.Chat.Id);
+>>>>>>> Stashed changes
           var Text := Format('Привет, %s %s!', [u.Message.Chat.FirstName, u.Message.Chat.LastName]);
           TtgClient.SendMessageToChat(u.Message.Chat.Id, Text);
         end;
