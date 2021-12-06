@@ -25,7 +25,7 @@ begin
       begin
         if Assigned(u.Message) and Assigned(u.Message.Chat) then
         begin
-          var Text := Format('Пошёл нахуй, %s %s!', [u.Message.Chat.FirstName, u.Message.Chat.LastName]);
+          var Text := Format('Привет, %s %s!', [u.Message.Chat.FirstName, u.Message.Chat.LastName]);
           TtgClient.SendMessageToChat(u.Message.Chat.Id, Text);
         end;
       end;
