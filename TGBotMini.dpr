@@ -10,16 +10,20 @@ begin
   TtgClient.TOKEN := {$INCLUDE BOT_TOKEN.key};
   Write('Telegram Bot Mini API Inited');
   //Bot Name
-  with TtgClient.GetMe do
+  var Me: TtgUserResponse;
+  if TtgClient.GetMe(Me) then
+  with Me do
   try
-    if Ok then Writeln(' - ', Result.Username);
+    if Ok and Assigned(Me.Result) then
+      Writeln(' - ', Me.Result.Username);
   finally
     Free;
   end;
   //LongPoll
   while True do
   try
-    var Updates: TtgUpdates := TtgClient.GetUpdates;
+    var Updates: TtgUpdates;
+    if TtgClient.GetUpdates(Updates) then
     try
       for var u in Updates.Result do
       begin
@@ -34,7 +38,8 @@ begin
       Updates.Free;
     end;
   except
-    on E: Exception do Writeln('Error: ' + E.Message);
+    on E: Exception do
+      Writeln('Error: ' + E.Message);
   end;
 end.
 

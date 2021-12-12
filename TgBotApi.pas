@@ -155,17 +155,20 @@ type
 
   TtgClient = class
   public
-    class var BASE_URL: string;
-    class var TOKEN: string;
-    class var LastUpdateId: int64;
+    class var
+      BASE_URL: string;
+    class var
+      TOKEN: string;
+    class var
+      LastUpdateId: int64;
     class function BuildUrl(const tg_method: string): string;
     class function Get<T: class, constructor>(out Value: T; const Method: string; const Json: string = ''): Boolean; overload;
     class function Get(const Method, Json: string): Boolean; overload;
   public
     //
     class procedure SendMessageToChat(ChatId: Int64; const Text: string); static;
-    class function GetUpdates: TtgUpdates;
-    class function GetMe: TtgUserResponse; static;
+    class function GetUpdates(out Value: TtgUpdates): Boolean;
+    class function GetMe(out Value: TtgUserResponse): Boolean; static;
   end;
 
 implementation
@@ -175,9 +178,9 @@ uses
 
 { TtgClient }
 
-class function TtgClient.GetMe: TtgUserResponse;
+class function TtgClient.GetMe(out Value: TtgUserResponse): Boolean;
 begin
-  Get(Result, 'getMe');
+  Result := Get(Value, 'getMe') and Assigned(Value);
 end;
 
 class procedure TtgClient.SendMessageToChat(ChatId: Int64; const Text: string);
@@ -187,8 +190,8 @@ begin
     Message.ChatId := ChatId;
     Message.Text := Text;
     var Resp: TtgMessageResponse := nil;
-    Get(Resp, 'sendMessage', Message.ToString);
-    Resp.Free;
+    if Get(Resp, 'sendMessage', Message.ToString) and Assigned(Resp) then
+      Resp.Free;
   finally
     Message.Free;
   end;
@@ -202,29 +205,34 @@ end;
 class function TtgClient.Get(const Method, Json: string): Boolean;
 begin
   var Response: string;
-  result := TDownload.PostText(BuildUrl(Method), Json, Response);
+  Result := TDownload.PostJson(BuildUrl(Method), Json, Response);
 end;
 
 class function TtgClient.Get<T>(out Value: T; const Method, Json: string): Boolean;
 begin
+  Value := nil;
   var Response: string;
-  TDownload.PostText(BuildUrl(Method), Json, Response);
+  TDownload.PostJson(BuildUrl(Method), Json, Response);
   try
     Value := TJSON.JsonToObject<T>(Response);
-    result := True;
+    Result := Assigned(Value);
   except
-    result := False;
+    Result := False;
   end;
 end;
 
-class function TtgClient.GetUpdates: TtgUpdates;
+class function TtgClient.GetUpdates(out Value: TtgUpdates): Boolean;
 begin
+  Result := False;
   var Params := TtgUpdateNew.Create;
   try
     Params.Offset := LastUpdateId;
-    Get(Result, 'getUpdates', Params.ToString);
-    if Result.Ok and (Length(Result.Result) > 0) then
-      LastUpdateId := Result.Result[High(Result.Result)].UpdateId + 1;
+    if Get(Value, 'getUpdates', Params.ToString) and Assigned(Value) then
+    begin
+      Result := True;
+      if Value.Ok and (Length(Value.Result) > 0) then
+        LastUpdateId := Value.Result[High(Value.Result)].UpdateId + 1;
+    end;
   finally
     Params.Free;
   end;
@@ -296,3 +304,4 @@ begin
 end;
 
 end.
+
