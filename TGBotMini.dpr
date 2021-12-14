@@ -54,13 +54,17 @@ begin
           begin
             var KeyBoard := TtgReplyKeyboardMarkup.Create([
               ['1', '2'],
-              ['3', '4']
+              ['3', '/info']
             ]);
             try
               TtgClient.SendMessageToChat(u.Message.Chat.Id, 'Меню 2', KeyBoard.ToString);
             finally
               KeyBoard.Free;
             end;
+          end
+          else if u.Message.Text = '/info' then
+          begin
+            TtgClient.SendMessageToChat(u.Message.Chat.Id, 'Нет информации');
           end
           else if u.Message.Text = 'А?' then
           begin

@@ -63,6 +63,17 @@ type
     property Title: string read FTitle;
   end;
 
+  TtgMessageEntity = class(TtgObject)
+  private
+    FLength: int64;
+    FType: string;
+    FOffset: int64;
+  public
+    property Length: int64 read FLength;
+    property Offset: int64 write FOffset;
+    property &Type: string read FType;
+  end;
+
   TtgMessage = class(TtgObject)
   private
     [JsonReflectAttribute(ctString, rtString, TUnixDateTimeInterceptor)]
@@ -71,12 +82,22 @@ type
     FFrom: TtgUser;
     FChat: TtgChat;
     FText: string;
+    FEntities: TArray<TtgMessageEntity>;
+    FReply_to_message: TtgMessage;
+    FNew_chat_participant: TtgUser;
+    FNew_chat_member: TtgUser;
+    FNew_chat_members: TArray<TtgUser>;
   public
     property MessageId: Int64 read FMessage_id;
     property From: TtgUser read FFrom;
     property Chat: TtgChat read FChat;
     property Date: TDateTime read FDate;
     property Text: string read FText;
+    property Entities: TArray<TtgMessageEntity> read FEntities;
+    property ReplyToMessage: TtgMessage read FReply_to_message;
+    property NewChatMember: TtgUser read FNew_chat_member;
+    property NewChatMembers: TArray<TtgUser> read FNew_chat_members;
+    property NewChatParticipant: TtgUser read FNew_chat_participant;
     destructor Destroy; override;
   end;
 
@@ -114,38 +135,15 @@ type
     property Offset: int64 read FOffset write FOffset;
   end;
 
-  TtgUpdateMessage = class(TtgObject)
-  private
-    [JsonReflectAttribute(ctString, rtString, TUnixDateTimeInterceptor)]
-    FDate: TDateTime;
-    FNew_chat_members: TArray<TtgUser>;
-    FNew_chat_participant: TtgUser;
-    FNew_chat_member: TtgUser;
-    Fmessage_id: int64;
-    FFrom: TtgUser;
-    FChat: TtgChat;
-    FText: string;
-  public
-    property Chat: TtgChat read FChat;
-    property Date: TDateTime read FDate;
-    property From: TtgUser read FFrom;
-    property MessageId: int64 read Fmessage_id;
-    property Text: string read FText;
-    property NewChatMember: TtgUser read FNew_chat_member;
-    property NewChatMembers: TArray<TtgUser> read FNew_chat_members;
-    property NewChatParticipant: TtgUser read FNew_chat_participant;
-    destructor Destroy; override;
-  end;
-
   TtgCallbackQuery = class(TtgObject)
   private
-    FMessage: TtgUpdateMessage;
+    FMessage: TtgMessage;
     FFrom: TtgUser;
     FChat_instance: int64;
     FData: string;
     FId: int64;
   public
-    property Message: TtgUpdateMessage read FMessage;
+    property Message: TtgMessage read FMessage;
     property From: TtgUser read FFrom;
     property ChatInstance: int64 read FChat_instance;
     property Data: string read FData;
@@ -155,11 +153,11 @@ type
 
   TtgUpdate = class(TtgObject)
   private
-    FMessage: TtgUpdateMessage;
+    FMessage: TtgMessage;
     FUpdate_id: int64;
     FCallback_query: TtgCallbackQuery;
   public
-    property Message: TtgUpdateMessage read FMessage;
+    property Message: TtgMessage read FMessage;
     property UpdateId: int64 read FUpdate_id;
     property CallbackQuery: TtgCallbackQuery read FCallback_query;
     destructor Destroy; override;
@@ -266,7 +264,7 @@ begin
   var Response: string;
   TDownload.PostJson(BuildUrl(Method), Json, Response);
   try
-    //writeln(Response);
+    writeln(Response);
     Value := TJSON.JsonToObject<T>(Response);
     Result := Assigned(Value);
   except
@@ -311,6 +309,14 @@ begin
     Ffrom.Free;
   if Assigned(Fchat) then
     Fchat.Free;
+  if Assigned(FReply_to_message) then
+    FReply_to_message.Free;
+  if Assigned(Fnew_chat_member) then
+    Fnew_chat_member.Free;
+  TArrayHelp.FreeArrayOfObject<TtgUser>(Fnew_chat_members);
+  if Assigned(Fnew_chat_participant) then
+    Fnew_chat_participant.Free;
+  TArrayHelp.FreeArrayOfObject<TtgMessageEntity>(FEntities);
   inherited;
 end;
 
@@ -331,22 +337,6 @@ begin
     Fmessage.Free;
   if Assigned(FCallback_query) then
     FCallback_query.Free;
-  inherited;
-end;
-
-{ TtgUpdateMessage }
-
-destructor TtgUpdateMessage.Destroy;
-begin
-  if Assigned(Ffrom) then
-    Ffrom.Free;
-  if Assigned(Fchat) then
-    Fchat.Free;
-  if Assigned(Fnew_chat_member) then
-    Fnew_chat_member.Free;
-  TArrayHelp.FreeArrayOfObject<TtgUser>(Fnew_chat_members);
-  if Assigned(Fnew_chat_participant) then
-    Fnew_chat_participant.Free;
   inherited;
 end;
 
