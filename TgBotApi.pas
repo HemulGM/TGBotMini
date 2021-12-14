@@ -179,9 +179,21 @@ type
     destructor Destroy; override;
   end;
 
-  TKeysArray = array of array of array of string;
+  TInlineKeysArray = array of array of array of string;
 
   TtgInlineKeyboardMarkup = class
+  private
+    FJSON: TJSONObject;
+  public
+    constructor Create; overload;
+    constructor Create(Keys: TInlineKeysArray); overload;
+    destructor Destroy; override;
+    function ToString: string; override;
+  end;
+
+  TKeysArray = array of array of string;
+
+  TtgReplyKeyboardMarkup = class
   private
     FJSON: TJSONObject;
   public
@@ -348,7 +360,7 @@ end;
 
 { TtgInlineKeyboardMarkup }
 
-constructor TtgInlineKeyboardMarkup.Create(Keys: TKeysArray);
+constructor TtgInlineKeyboardMarkup.Create(Keys: TInlineKeysArray);
 begin
   Create;
   var KB := TJSONArray.Create;
@@ -380,6 +392,43 @@ begin
 end;
 
 function TtgInlineKeyboardMarkup.ToString: string;
+begin
+  Result := FJSON.ToJSON;
+end;
+
+{ TtgReplyKeyboardMarkup }
+
+constructor TtgReplyKeyboardMarkup.Create;
+begin
+  inherited;
+  FJSON := TJSONObject.Create;
+end;
+
+constructor TtgReplyKeyboardMarkup.Create(Keys: TKeysArray);
+begin
+  Create;
+  var KB := TJSONArray.Create;
+  FJSON.AddPair('keyboard', KB);
+  for var Row in Keys do
+  begin
+    var JSRow := TJSONArray.Create;
+    KB.Add(JSRow);
+    for var Button in Row do
+    begin
+      var JSButton := TJSONObject.Create;
+      JSButton.AddPair('text', Button);
+      JSRow.Add(JSButton);
+    end;
+  end;
+end;
+
+destructor TtgReplyKeyboardMarkup.Destroy;
+begin
+  FJSON.Free;
+  inherited;
+end;
+
+function TtgReplyKeyboardMarkup.ToString: string;
 begin
   Result := FJSON.ToJSON;
 end;

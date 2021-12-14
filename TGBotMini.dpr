@@ -49,6 +49,19 @@ begin
               KeyBoard.Free;
             end;
           end
+          else
+          if u.Message.Text = '/start' then
+          begin
+            var KeyBoard := TtgReplyKeyboardMarkup.Create([
+              ['1', '2'],
+              ['3', '4']
+            ]);
+            try
+              TtgClient.SendMessageToChat(u.Message.Chat.Id, 'Меню 2', KeyBoard.ToString);
+            finally
+              KeyBoard.Free;
+            end;
+          end
           else if u.Message.Text = 'А?' then
           begin
             TtgClient.SendMessageToChat(u.Message.Chat.Id, 'Не Ааа!');
