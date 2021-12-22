@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils, System.Json, REST.Json, System.Net.HttpClient,
-  REST.JsonReflect, REST.Json.Interceptors, HGM.Common.Download;
+  REST.JsonReflect, REST.Json.Interceptors, HGM.Common.Download, System.Classes;
 
 type
   TtgObject = class
@@ -215,6 +215,8 @@ type
   public
     //
     class procedure SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = ''); static;
+    class procedure SendPhotoToChat(ChatId: Int64; const Caption, FileName: string; Stream: TStream); overload; static;
+    class procedure SendPhotoToChat(ChatId: Int64; const Caption, FileName: string); overload; static;
     class function GetUpdates(out Value: TtgUpdates): Boolean;
     class function GetMe(out Value: TtgUserResponse): Boolean; static;
   end;
@@ -222,7 +224,7 @@ type
 implementation
 
 uses
-  HGm.ArrayHelper;
+  HGm.ArrayHelper, System.NetEncoding;
 
 { TtgClient }
 
@@ -244,6 +246,30 @@ begin
       Resp.Free;
   finally
     Message.Free;
+  end;
+end;
+
+class procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption, FileName: string);
+begin
+  var Photo := TFileStream.Create(FileName, fmShareDenyWrite);
+  try
+    TtgClient.SendPhotoToChat(ChatId, Caption, FileName, Photo);
+  finally
+    Photo.Free;
+  end;
+end;
+
+class procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption, FileName: string; Stream: TStream);
+var
+  Resp: TStringStream;
+begin
+  Resp := TStringStream.Create;
+  try
+    Stream.Position := 0;
+    TDownload.PostFile(Format(BuildUrl('sendPhoto') + '?chat_id=%d&caption=%s',
+      [ChatId, TURLEncoding.URL.Encode(Caption)]), ['photo'], [ExtractFileName(FileName)], [Stream], Resp);
+  finally
+    Resp.Free
   end;
 end;
 

@@ -2,7 +2,8 @@
 
 uses
   System.SysUtils,
-  TgBotApi in 'TgBotApi.pas';
+  TgBotApi in 'TgBotApi.pas',
+  System.Classes;
 
 begin
   ReportMemoryLeaksOnShutdown := True;
@@ -28,9 +29,9 @@ begin
       for var u in Updates.Result do
       begin
         if Assigned(u.CallbackQuery) and
-           Assigned(u.CallbackQuery.Message) and
-           Assigned(u.CallbackQuery.Message.Chat)
-        then
+          Assigned(u.CallbackQuery.Message) and
+          Assigned(u.CallbackQuery.Message.Chat)
+          then
         begin
           TtgClient.SendMessageToChat(u.CallbackQuery.Message.Chat.Id, 'Вы выбрали ' + u.CallbackQuery.Data);
         end;
@@ -40,22 +41,21 @@ begin
           if u.Message.Text = '/menu' then
           begin
             var KeyBoard := TtgInlineKeyboardMarkup.Create([
-              [['1', 'command1'], ['2', 'command2']],
+              [['🌦️ Погода', 'command1'], ['🥐 Еда', 'command2']],
               [['3', 'command3'], ['4', 'command4']]
-            ]);
+              ]);
             try
               TtgClient.SendMessageToChat(u.Message.Chat.Id, 'Меню', KeyBoard.ToString);
             finally
               KeyBoard.Free;
             end;
           end
-          else
-          if u.Message.Text = '/start' then
+          else if u.Message.Text = '/start' then
           begin
             var KeyBoard := TtgReplyKeyboardMarkup.Create([
               ['1', '2'],
               ['3', '/info']
-            ]);
+              ]);
             try
               TtgClient.SendMessageToChat(u.Message.Chat.Id, 'Меню 2', KeyBoard.ToString);
             finally
@@ -69,6 +69,10 @@ begin
           else if u.Message.Text = 'А?' then
           begin
             TtgClient.SendMessageToChat(u.Message.Chat.Id, 'Не Ааа!');
+          end
+          else if u.Message.Text = '/photo' then
+          begin
+            TtgClient.SendPhotoToChat(u.Message.Chat.Id, 'Фото', 'D:\Temp\Iconion\HGM\Material Icons_e80e(0)_1024_Fill.png');
           end;
         end;
       end;
