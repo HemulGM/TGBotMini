@@ -15,6 +15,8 @@ procedure ProcA(u: TtgUpdate);
 
 procedure ProcPhoto(u: TtgUpdate);
 
+procedure ProcCallbackQuery(u: TtgUpdate);
+
 implementation
 
 procedure ProcMenu(u: TtgUpdate);
@@ -56,6 +58,17 @@ end;
 procedure ProcPhoto(u: TtgUpdate);
 begin
   Client.SendPhotoToChat(u.Message.Chat.Id, 'Фото', 'D:\Temp\Iconion\HGM\Material Icons_e80e(0)_1024_Fill.png');
+end;
+
+procedure ProcCallbackQuery(u: TtgUpdate);
+begin
+  if Assigned(u.CallbackQuery) and
+    Assigned(u.CallbackQuery.Message) and
+    Assigned(u.CallbackQuery.Message.Chat)
+    then
+  begin
+    Client.SendMessageToChat(u.CallbackQuery.Message.Chat.Id, 'Вы выбрали ' + u.CallbackQuery.Data);
+  end;
 end;
 
 end.
