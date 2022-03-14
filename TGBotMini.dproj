@@ -152,6 +152,8 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="TgBotApi.pas"/>
+        <DCCReference Include="..\JSONParam\HGM.JSONParams.pas"/>
+        <DCCReference Include="..\ArrayHelpers\HGM.ArrayHelpers.pas"/>
         <None Include="BOT_TOKEN.key"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
@@ -196,7 +198,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="TOKEN.key" Configuration="Debug" Class="ProjectFile">
+                <DeployFile LocalName="BOT_TOKEN.key" Configuration="Debug" Class="ProjectFile">
                     <Platform Name="Win32">
                         <RemoteDir>.\</RemoteDir>
                         <Overwrite>true</Overwrite>
