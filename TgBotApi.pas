@@ -397,6 +397,7 @@ type
     function GetMe(out Value: TtgUserResponse): Boolean;
     function GetUpdates(out Value: TtgUpdates): Boolean; overload;
     function Polling(Proc: TtgUpdateProc): Boolean; overload;
+    procedure Hello;
     function GetHistory(out Items: TArray<TtgMessage>; Params: TtgParamsHistory): Boolean;
     procedure SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = '');
     procedure SendPhotoToChat(ChatId: Int64; const Caption, FileName: string); overload;
@@ -412,6 +413,20 @@ uses
   HGm.ArrayHelper, System.NetEncoding;
 
 { TtgClient }
+
+procedure TtgClient.Hello;
+begin
+  Write('Telegram Bot Mini API Inited');
+  var Me: TtgUserResponse;
+  if GetMe(Me) then
+    with Me do
+    try
+      if Ok and Assigned(Me.Result) then
+        Writeln(' - ', Me.Result.Username);
+    finally
+      Free;
+    end;
+end;
 
 function TtgClient.GetMe(out Value: TtgUserResponse): Boolean;
 begin
