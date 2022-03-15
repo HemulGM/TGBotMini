@@ -217,6 +217,21 @@ type
     property MimeType: string read FMime_type write FMime_type;
   end;
 
+  TtgLocation = class(TtgObject)
+  private
+    FLive_period: Int64;
+    FLatitude: Extended;
+    FLongitude: Extended;
+    FHeading: Int64;
+    FHorizontal_accuracy: Extended;
+  public
+    property Heading: Int64 read FHeading write FHeading;
+    property HorizontalAccuracy: Extended read FHorizontal_accuracy write FHorizontal_accuracy;
+    property Latitude: Extended read FLatitude write FLatitude;
+    property LivePeriod: Int64 read FLive_period write FLive_period;
+    property Longitude: Extended read FLongitude write FLongitude;
+  end;
+
   TtgMessage = class(TtgObject)
   private
     [JsonReflectAttribute(ctString, rtString, TUnixDateTimeInterceptor)]
@@ -249,6 +264,7 @@ type
     FForward_from: TTgUser;
     FLeft_chat_member: TTgUser;
     FLeft_chat_participant: TtgUser;
+    FLocation: TtgLocation;
   public
     property Animation: TtgAnimation read FAnimation;
     property Caption: string read FCaption;
@@ -261,6 +277,7 @@ type
     property From: TtgUser read FFrom;
     property LeftChatMember: TTgUser read FLeft_chat_member;
     property LeftChatParticipant: TtgUser read FLeft_chat_participant;
+    property Location: TtgLocation read FLocation;
     property MessageId: Int64 read FMessage_id;
     property NewChatMember: TtgUser read FNew_chat_member;
     property NewChatMembers: TArray<TtgUser> read FNew_chat_members;
@@ -572,6 +589,8 @@ destructor TtgMessage.Destroy;
 begin
   if Assigned(Ffrom) then
     Ffrom.Free;
+  if Assigned(FLocation) then
+    FLocation.Free;
   if Assigned(FLeft_chat_participant) then
     FLeft_chat_participant.Free;
   if Assigned(FLeft_chat_member) then
