@@ -152,8 +152,8 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="TgBotApi.pas"/>
-        <DCCReference Include="..\JSONParam\HGM.JSONParams.pas"/>
-        <DCCReference Include="..\ArrayHelpers\HGM.ArrayHelpers.pas"/>
+        <DCCReference Include="JSONParam\HGM.JSONParams.pas"/>
+        <DCCReference Include="ArrayHelpers\HGM.ArrayHelpers.pas"/>
         <DCCReference Include="TgBotProc.Test.pas"/>
         <DCCReference Include="TgBotApi.Client.pas"/>
         <None Include="BOT_TOKEN.key"/>

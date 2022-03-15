@@ -4,8 +4,8 @@ uses
   System.SysUtils,
   System.Classes,
   TgBotApi in 'TgBotApi.pas',
-  HGM.JSONParams in '..\JSONParam\HGM.JSONParams.pas',
-  HGM.ArrayHelpers in '..\ArrayHelpers\HGM.ArrayHelpers.pas',
+  HGM.JSONParams in 'JSONParam\HGM.JSONParams.pas',
+  HGM.ArrayHelpers in 'ArrayHelpers\HGM.ArrayHelpers.pas',
   TgBotProc.Test in 'TgBotProc.Test.pas',
   TgBotApi.Client in 'TgBotApi.Client.pas';
 
