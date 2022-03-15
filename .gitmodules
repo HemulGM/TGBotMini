@@ -1,3 +1,6 @@
 [submodule "JSONParam"]
 	path = JSONParam
 	url = https://github.com/HemulGM/JSONParam
+[submodule "ArrayHelpers"]
+	path = ArrayHelpers
+	url = https://github.com/HemulGM/ArrayHelpers
