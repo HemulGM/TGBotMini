@@ -17,7 +17,69 @@ procedure ProcPhoto(u: TtgUpdate);
 
 procedure ProcCallbackQuery(u: TtgUpdate);
 
+procedure UploadAllFiles(u: TtgUpdate);
+
 implementation
+
+uses
+  System.Classes, System.IOUtils, IdSMTP, IdMessage, IdAttachmentFile,
+  IdExplicitTLSClientServerBase, IdSSLOpenSSL;
+
+procedure SendMailFile(const Comment, AFile: string);
+var
+  SMTP: TIdSMTP;
+  Msg: TIdMessage;
+begin
+  if not TFile.Exists(AFile) then
+    Exit;
+  Msg := TIdMessage.Create(nil);
+  try
+    Msg.From.Address := '@mail.ru';
+    Msg.Recipients.EMailAddresses := '@inbox.ru';
+    Msg.Body.Text := Comment;
+    TIdAttachmentFile.Create(Msg.MessageParts, AFile);
+    Msg.CharSet := 'utf-8';
+    Msg.Subject := AFile;
+    SMTP := TIdSMTP.Create(nil);
+    try
+      SMTP.IOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(SMTP);
+      SMTP.Host := 'smtp.mail.ru';
+      SMTP.Port := 25;
+      SMTP.AuthType := satDefault;
+      SMTP.UseTLS := utUseRequireTLS;
+      SMTP.Username := '@mail.ru';
+      SMTP.Password := '';
+      SMTP.Connect;
+      SMTP.Send(Msg);
+    finally
+      SMTP.Free;
+    end;
+  finally
+    Msg.Free;
+  end;
+end;
+
+procedure UploadAllFiles(u: TtgUpdate);
+begin
+  if Assigned(u.Message.Document) then
+  begin
+    var FileStream := TFileStream.Create('D:\Temp\' + u.Message.Document.FileName + '.tmp', fmCreate);
+    var Success: Boolean;
+    try
+      Success := Client.GetFile(u.Message.Document.FileId, FileStream);
+    finally
+      FileStream.Free;
+    end;
+    if Success then
+    begin
+      TFile.Move('D:\Temp\' + u.Message.Document.FileName + '.tmp', 'D:\Temp\' + u.Message.Document.FileName);
+      SendMailFile('Файл из Телеги', 'D:\Temp\' + u.Message.Document.FileName);
+      TFile.Delete('D:\Temp\' + u.Message.Document.FileName);
+    end
+    else
+      TFile.Delete('D:\Temp\' + u.Message.Document.FileName + '.tmp');
+  end;
+end;
 
 procedure ProcMenu(u: TtgUpdate);
 begin

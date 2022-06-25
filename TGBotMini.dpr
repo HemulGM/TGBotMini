@@ -12,14 +12,14 @@ uses
 begin
   ReportMemoryLeaksOnShutdown := True;
   Client := TtgClient.Create({$INCLUDE BOT_TOKEN.key});
-  Client.Hello;
-  //LongPoll
   while True do
   try
+    Client.Hello;
     Client.Polling(
       procedure(u: TtgUpdate)
       begin
         Writeln('Data: ', u.ToString);                                  // DEBUG
+        UploadAllFiles(u);
         ProcCallbackQuery(u);
         if Assigned(u.Message) and Assigned(u.Message.Chat) then
         begin
@@ -35,6 +35,7 @@ begin
             ProcPhoto(u);
         end;
       end);
+    Sleep(5000);
   except
     on E: Exception do
       Writeln('Error: ' + E.Message);
