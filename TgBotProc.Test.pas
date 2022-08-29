@@ -3,7 +3,7 @@
 interface
 
 uses
-  TgBotApi, TgBotApi.Client;
+  System.SysUtils, TgBotApi, TgBotApi.Client;
 
 procedure ProcMenu(u: TtgUpdate);
 
@@ -61,7 +61,7 @@ end;
 
 procedure UploadAllFiles(u: TtgUpdate);
 begin
-  if Assigned(u.Message.Document) then
+  if Assigned(u.Message) and Assigned(u.Message.Document) then
   begin
     var FileStream := TFileStream.Create('D:\Temp\' + u.Message.Document.FileName + '.tmp', fmCreate);
     var Success: Boolean;

@@ -6,6 +6,8 @@ uses
   System.SysUtils, System.Classes, System.Json, REST.Json, System.Net.HttpClient,
   REST.JsonReflect, REST.Json.Interceptors, HGM.Common.Download, HGM.JSONParams;
 
+{$SCOPEDENUMS ON}
+
 type
   TtgObject = class
     constructor Create; virtual;
@@ -417,6 +419,28 @@ type
   TtgParamsHistory = class(TJSONParam)
   end;
 
+  TtgPollType = (Regular, Quiz);
+
+  TtgPollTypeHelper = record helper for TtgPollType
+    function ToString: string;
+  end;
+
+  TtgPollParams = class(TJSONParam)
+    function ChatId(const Value: string): TtgPollParams; overload;
+    function ChatId(const Value: Int64): TtgPollParams; overload;
+    function Question(const Value: string): TtgPollParams;
+    function Options(const Value: TArray<string>): TtgPollParams;
+    function IsNotAnonymous(const Value: Boolean = True): TtgPollParams;
+    function &Type(const Value: TtgPollType): TtgPollParams;
+    function OpenPeriod(const Value: Word): TtgPollParams; overload;
+  end;
+
+  TtgAudioParams = class(TJSONParam)
+    function ChatId(const Value: string): TtgAudioParams; overload;
+    function ChatId(const Value: Int64): TtgAudioParams; overload;
+    function Audio(const Url: string): TtgAudioParams; overload;
+  end;
+
   TtgClient = class
   private
     FBaseUrl: string;
@@ -437,6 +461,8 @@ type
     procedure SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = '');
     procedure SendPhotoToChat(ChatId: Int64; const Caption, FileName: string); overload;
     procedure SendPhotoToChat(ChatId: Int64; const Caption, FileName: string; Stream: TStream); overload;
+    procedure SendPoll(Params: TtgPollParams; var Message: TtgMessage);
+    procedure SendAudio(Params: TtgAudioParams; var Message: TtgMessage);
     property BaseUrl: string read FBaseUrl write FBaseUrl;
     property LastUpdateId: Int64 read FLastUpdateId write FLastUpdateId;
     property Token: string read FToken write FToken;
@@ -466,6 +492,13 @@ end;
 function TtgClient.GetMe(out Value: TtgUserResponse): Boolean;
 begin
   Result := Get(Value, 'getMe');
+end;
+
+procedure TtgClient.SendAudio(Params: TtgAudioParams; var Message: TtgMessage);
+begin
+  var Resp: TtgMessageResponse := nil;
+  if Get(Resp, 'sendAudio', Params.ToJsonString) then
+    Resp.Free;
 end;
 
 procedure TtgClient.SendMessageToChat(ChatId: Int64; const Text, KeyBoard: string);
@@ -506,6 +539,13 @@ begin
   finally
     Resp.Free
   end;
+end;
+
+procedure TtgClient.SendPoll(Params: TtgPollParams; var Message: TtgMessage);
+begin
+  var Resp: TtgMessageResponse := nil;
+  if Get(Resp, 'sendPoll', Params.ToJsonString) then
+    Resp.Free;
 end;
 
 function TtgClient.BuildDownloadFileUrl(const FilePath: string): string;
@@ -809,6 +849,84 @@ begin
   if Assigned(FThumb) then
     FThumb.Free;
   inherited;
+end;
+
+{ TtgPollParams }
+
+function TtgPollParams.&Type(const Value: TtgPollType): TtgPollParams;
+begin
+  Result := Self;
+  Add('type', Value.ToString);
+end;
+
+function TtgPollParams.ChatId(const Value: string): TtgPollParams;
+begin
+  Result := Self;
+  Add('chat_id', Value);
+end;
+
+function TtgPollParams.ChatId(const Value: Int64): TtgPollParams;
+begin
+  Result := Self;
+  Add('chat_id', Value);
+end;
+
+function TtgPollParams.IsNotAnonymous(const Value: Boolean): TtgPollParams;
+begin
+  Result := Self;
+  Add('is_anonymous', not Value);
+end;
+
+function TtgPollParams.OpenPeriod(const Value: Word): TtgPollParams;
+begin
+  Result := Self;
+  Add('open_period', Value);
+end;
+
+function TtgPollParams.Options(const Value: TArray<string>): TtgPollParams;
+begin
+  Result := Self;
+  Add('options', Value);
+end;
+
+function TtgPollParams.Question(const Value: string): TtgPollParams;
+begin
+  Result := Self;
+  Add('question', Value);
+end;
+
+{ TtgPollTypeHelper }
+
+function TtgPollTypeHelper.ToString: string;
+begin
+  case Self of
+    TtgPollType.Regular:
+      Result := 'regular';
+    TtgPollType.Quiz:
+      Result := 'quiz';
+  else
+    Result := 'regular';
+  end;
+end;
+
+{ TtgAudioParams }
+
+function TtgAudioParams.Audio(const Url: string): TtgAudioParams;
+begin
+  Result := Self;
+  Add('audio', Url);
+end;
+
+function TtgAudioParams.ChatId(const Value: string): TtgAudioParams;
+begin
+  Result := Self;
+  Add('chat_id', Value);
+end;
+
+function TtgAudioParams.ChatId(const Value: Int64): TtgAudioParams;
+begin
+  Result := Self;
+  Add('chat_id', Value);
 end;
 
 end.

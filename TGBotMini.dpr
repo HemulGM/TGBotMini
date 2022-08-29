@@ -7,7 +7,8 @@ uses
   HGM.JSONParams in 'JSONParam\HGM.JSONParams.pas',
   HGM.ArrayHelpers in 'ArrayHelpers\HGM.ArrayHelpers.pas',
   TgBotProc.Test in 'TgBotProc.Test.pas',
-  TgBotApi.Client in 'TgBotApi.Client.pas';
+  TgBotApi.Client in 'TgBotApi.Client.pas',
+  TgBotProc.BlogItBlackCat in 'TgBotProc.BlogItBlackCat.pas';
 
 begin
   ReportMemoryLeaksOnShutdown := True;
