@@ -119,7 +119,11 @@ end;
 
 procedure ProcPhoto(u: TtgUpdate);
 begin
-  Client.SendPhotoToChat(u.Message.Chat.Id, 'Фото', 'D:\Temp\Iconion\HGM\Material Icons_e80e(0)_1024_Fill.png');
+  Client.SendPhotoToChat(u.Message.Chat.Id, 'Фото',
+    [
+    'D:\Temp\Iconion\HGM\Material Icons_e80e(0)_1024_Fill.png',
+    'D:\Temp\Iconion\HGM\Material Icons_e80e(0)_1024_Fill.png'
+    ]);
 end;
 
 procedure ProcCallbackQuery(u: TtgUpdate);

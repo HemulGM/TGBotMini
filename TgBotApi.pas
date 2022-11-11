@@ -4,7 +4,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Json, REST.Json, System.Net.HttpClient,
-  REST.JsonReflect, REST.Json.Interceptors, HGM.Common.Download, HGM.JSONParams;
+  REST.JsonReflect, REST.Json.Interceptors, HGM.Common.Download, HGM.JSONParams,
+  System.Generics.Collections;
 
 {$SCOPEDENUMS ON}
 
@@ -215,6 +216,18 @@ type
     destructor Destroy; override;
   end;
 
+  TtgPollAnswer = class(TtgObject)
+  private
+    FUser: TtgUser;
+    FPoll_id: string;
+    FOption_ids: TArray<Integer>;
+  public
+    property User: TtgUser read FUser;
+    property PollId: string read FPoll_id;
+    property OptionIds: TArray<Integer> read FOption_ids;
+    destructor Destroy; override;
+  end;
+
   TtgVoice = class(TtgFile)
   private
     FMime_type: string;
@@ -375,11 +388,13 @@ type
     FUpdate_id: int64;
     FCallback_query: TtgCallbackQuery;
     FEdited_message: TtgMessage;
+    FPoll_answer: TtgPollAnswer;
   public
     property Message: TtgMessage read FMessage;
     property EditedMessage: TtgMessage read FEdited_message;
     property UpdateId: int64 read FUpdate_id;
     property CallbackQuery: TtgCallbackQuery read FCallback_query;
+    property PollAnswer: TtgPollAnswer read FPoll_answer;
     destructor Destroy; override;
   end;
 
@@ -459,8 +474,8 @@ type
     function Polling(Proc: TtgUpdateProc): Boolean; overload;
     procedure Hello;
     procedure SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = '');
-    procedure SendPhotoToChat(ChatId: Int64; const Caption, FileName: string); overload;
-    procedure SendPhotoToChat(ChatId: Int64; const Caption, FileName: string; Stream: TStream); overload;
+    procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileNames: TArray<string>); overload;
+    procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileNames: TArray<string>; Streams: TArray<TStream>); overload;
     procedure SendPoll(Params: TtgPollParams; var Message: TtgMessage);
     procedure SendAudio(Params: TtgAudioParams; var Message: TtgMessage);
     property BaseUrl: string read FBaseUrl write FBaseUrl;
@@ -517,27 +532,46 @@ begin
   end;
 end;
 
-procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption, FileName: string);
+procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileNames: TArray<string>);
+var
+  Streams: TObjectList<TStream>;
+  FNs: TStringList;
 begin
-  var Photo := TFileStream.Create(FileName, fmShareDenyWrite);
+  Streams := TObjectList<TStream>.Create;
+  FNs := TStringList.Create;
   try
-    SendPhotoToChat(ChatId, Caption, FileName, Photo);
+    for var FileName in FileNames do
+    try
+      Streams.Add(TFileStream.Create(FileName, fmShareDenyWrite));
+      FNs.Add(ExtractFileName(FileName));
+    except
+      // skip
+    end;
+    SendPhotoToChat(ChatId, Caption, FNs.ToStringArray, Streams.ToArray);
   finally
-    Photo.Free;
+    FNs.Free;
+    Streams.Free;
   end;
 end;
 
-procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption, FileName: string; Stream: TStream);
+procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileNames: TArray<string>; Streams: TArray<TStream>);
 var
   Resp: TStringStream;
+  Fields: TStringList;
 begin
   Resp := TStringStream.Create;
+  Fields := TStringList.Create;
   try
-    Stream.Position := 0;
+    for var Stream in Streams do
+    begin
+      Stream.Position := 0;
+      Fields.Add('photo' + Fields.Count.ToString);
+    end;
     TDownload.PostFile(Format(BuildUrl('sendPhoto') + '?chat_id=%d&caption=%s',
-      [ChatId, TURLEncoding.URL.Encode(Caption)]), ['photo'], [ExtractFileName(FileName)], [Stream], Resp);
+      [ChatId, TURLEncoding.URL.Encode(Caption)]), Fields.ToStringArray, FileNames, Streams, Resp);
   finally
-    Resp.Free
+    Fields.Free;
+    Resp.Free;
   end;
 end;
 
@@ -719,6 +753,8 @@ begin
     FEdited_message.Free;
   if Assigned(FCallback_query) then
     FCallback_query.Free;
+  if Assigned(FPoll_answer) then
+    FPoll_answer.Free;
   inherited;
 end;
 
@@ -927,6 +963,15 @@ function TtgAudioParams.ChatId(const Value: Int64): TtgAudioParams;
 begin
   Result := Self;
   Add('chat_id', Value);
+end;
+
+{ TtgPollAnswer }
+
+destructor TtgPollAnswer.Destroy;
+begin
+  if Assigned(FUser) then
+    FUser.Free;
+  inherited;
 end;
 
 end.
