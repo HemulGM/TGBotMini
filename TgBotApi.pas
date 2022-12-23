@@ -464,12 +464,15 @@ type
     class function Create(Func: TtgUpdateFunc; const ConditionText: string = ''): TtgUpdateSubscriber; static;
   end;
 
+  TOnTextOut = procedure (Source:string; text:string) of object;
+
   TtgClient = class
   private
     FBaseUrl: string;
     FToken: string;
     FLastUpdateId: Int64;
     FDoPolling: Boolean;
+    fOnTextOut:TOnTextOut;
     FSubscribers: TList<TtgUpdateSubscriber>;
     function ProccessUpdate(u: TtgUpdate): Boolean;
   public
@@ -493,9 +496,11 @@ type
     procedure SendAudio(Params: TtgAudioParams; var Message: TtgMessage);
     procedure Subscribe(Func: TtgUpdateFunc; const Text: string = ''); overload;
     procedure Unsubscribe(Func: TtgUpdateFunc);
+    procedure TextOut(Source:string; text:string; DoLn:boolean=true);
     property BaseUrl: string read FBaseUrl write FBaseUrl;
     property LastUpdateId: Int64 read FLastUpdateId write FLastUpdateId;
     property Token: string read FToken write FToken;
+    property OnTextOut: TOnTextOut read fOnTextOut write fOnTextOut;
   end;
 
 implementation
@@ -507,13 +512,13 @@ uses
 
 procedure TtgClient.Hello;
 begin
-  Write('Telegram Bot Mini API Inited');
+  TextOut('', 'Telegram Bot Mini API Inited', false);
   var Me: TtgUserResponse;
   if GetMe(Me) then
     with Me do
     try
       if Ok and Assigned(Me.Result) then
-        Writeln(' - ', Me.Result.Username);
+        TextOut(' - ', Me.Result.Username);
     finally
       Free;
     end;
@@ -573,7 +578,7 @@ begin
       Format(BuildUrl('sendPhoto') + '?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]),
       Fields.ToStringArray, [FileName], [Stream], Resp)
       then
-      Writeln('Error: ' + Resp.DataString);
+      TextOut('', 'Error: ' + Resp.DataString);
   finally
     Fields.Free;
     Resp.Free;
@@ -595,6 +600,18 @@ end;
 procedure TtgClient.Subscribe(Func: TtgUpdateFunc; const Text: string);
 begin
   FSubscribers.Add(TtgUpdateSubscriber.Create(Func, Text));
+end;
+
+procedure TtgClient.TextOut(Source, text: string; DoLn: boolean);
+begin
+  if IsConsole then
+    case DoLn of
+      true:  writeln(Source, text);
+      false: write(Source, text);
+    end
+
+  else
+    if Assigned(OnTextOut) then  OnTextOut(Source, text);
 end;
 
 procedure TtgClient.Unsubscribe(Func: TtgUpdateFunc);
@@ -648,7 +665,7 @@ begin
   var Response: string;
   TDownload.PostJson(BuildUrl(Method), Json, Response);
   try
-    writeln(Response);
+    TextOut('', Response);
     Value := TJSON.JsonToObject<T>(Response);
     Result := Assigned(Value);
   except
