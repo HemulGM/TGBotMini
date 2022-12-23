@@ -5,19 +5,21 @@ interface
 uses
   System.SysUtils, TgBotApi, TgBotApi.Client;
 
-procedure ProcMenu(u: TtgUpdate);
+function ProcMenu(u: TtgUpdate): Boolean;
 
-procedure ProcStart(u: TtgUpdate);
+function ProcStart(u: TtgUpdate): Boolean;
 
-procedure ProcInfo(u: TtgUpdate);
+function ProcInfo(u: TtgUpdate): Boolean;
 
-procedure ProcA(u: TtgUpdate);
+function ProcA(u: TtgUpdate): Boolean;
 
-procedure ProcPhoto(u: TtgUpdate);
+function ProcPhoto(u: TtgUpdate): Boolean;
 
-procedure ProcCallbackQuery(u: TtgUpdate);
+function ProcCallbackQuery(u: TtgUpdate): Boolean;
 
-procedure UploadAllFiles(u: TtgUpdate);
+function UploadAllFiles(u: TtgUpdate): Boolean;
+
+function Logging(u: TtgUpdate): Boolean;
 
 implementation
 
@@ -59,34 +61,45 @@ begin
   end;
 end;
 
-procedure UploadAllFiles(u: TtgUpdate);
+function Logging(u: TtgUpdate): Boolean;
 begin
+  Result := False;
+  Writeln('Data: ', u.ToString);
+end;
+
+function UploadAllFiles(u: TtgUpdate): Boolean;
+const
+  UploadPath = 'D:\Temp\';
+begin
+  Result := False;
   if Assigned(u.Message) and Assigned(u.Message.Document) then
   begin
-    var FileStream := TFileStream.Create('D:\Temp\' + u.Message.Document.FileName + '.tmp', fmCreate);
-    var Success: Boolean;
+    var FileName := UploadPath + u.Message.Document.FileName;
+    var FileNameTemp := UploadPath + u.Message.Document.FileName + '.tmp';
+    var FileStream := TFileStream.Create(FileNameTemp, fmCreate);
+    var Success: Boolean := False;
     try
       Success := Client.GetFile(u.Message.Document.FileId, FileStream);
     finally
       FileStream.Free;
+      if Success then
+      begin
+        TFile.Move(FileNameTemp, FileName);
+        SendMailFile('Файл из Телеги', FileName);
+        TFile.Delete(FileName);
+      end
+      else
+        TFile.Delete(FileNameTemp);
     end;
-    if Success then
-    begin
-      TFile.Move('D:\Temp\' + u.Message.Document.FileName + '.tmp', 'D:\Temp\' + u.Message.Document.FileName);
-      SendMailFile('Файл из Телеги', 'D:\Temp\' + u.Message.Document.FileName);
-      TFile.Delete('D:\Temp\' + u.Message.Document.FileName);
-    end
-    else
-      TFile.Delete('D:\Temp\' + u.Message.Document.FileName + '.tmp');
   end;
 end;
 
-procedure ProcMenu(u: TtgUpdate);
+function ProcMenu(u: TtgUpdate): Boolean;
 begin
+  Result := False;
   var KeyBoard := TtgInlineKeyboardMarkup.Create([
     [['🌦️ Погода', 'command1'], ['🥐 Еда', 'command2']],
-    [['3', 'command3'], ['4', 'command4']]
-    ]);
+    [['3', 'command3'], ['4', 'command4']]]);
   try
     Client.SendMessageToChat(u.Message.Chat.Id, 'Меню', KeyBoard.ToString);
   finally
@@ -94,8 +107,9 @@ begin
   end;
 end;
 
-procedure ProcStart(u: TtgUpdate);
+function ProcStart(u: TtgUpdate): Boolean;
 begin
+  Result := False;
   var KeyBoard := TtgReplyKeyboardMarkup.Create([
     ['1', '2'],
     ['3', '/info']
@@ -107,23 +121,27 @@ begin
   end;
 end;
 
-procedure ProcInfo(u: TtgUpdate);
+function ProcInfo(u: TtgUpdate): Boolean;
 begin
+  Result := False;
   Client.SendMessageToChat(u.Message.Chat.Id, 'Нет информации');
 end;
 
-procedure ProcA(u: TtgUpdate);
+function ProcA(u: TtgUpdate): Boolean;
 begin
+  Result := False;
   Client.SendMessageToChat(u.Message.Chat.Id, 'Не Ааа!');
 end;
 
-procedure ProcPhoto(u: TtgUpdate);
+function ProcPhoto(u: TtgUpdate): Boolean;
 begin
+  Result := False;
   Client.SendPhotoToChat(u.Message.Chat.Id, 'Фото', 'D:\Temp\Iconion\HGM\Material Icons_e80e(0)_1024_Fill.png');
 end;
 
-procedure ProcCallbackQuery(u: TtgUpdate);
+function ProcCallbackQuery(u: TtgUpdate): Boolean;
 begin
+  Result := False;
   if Assigned(u.CallbackQuery) and
     Assigned(u.CallbackQuery.Message) and
     Assigned(u.CallbackQuery.Message.Chat)

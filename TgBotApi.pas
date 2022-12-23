@@ -429,6 +429,8 @@ type
     function ToString: string; override;
   end;
 
+  TtgUpdateFunc = reference to function(Update: TtgUpdate): Boolean;
+
   TtgUpdateProc = reference to procedure(Update: TtgUpdate);
 
   TtgParamsHistory = class(TJSONParam)
@@ -456,13 +458,23 @@ type
     function Audio(const Url: string): TtgAudioParams; overload;
   end;
 
+  TtgUpdateSubscriber = record
+    ConditionText: string;
+    Func: TtgUpdateFunc;
+    class function Create(Func: TtgUpdateFunc; const ConditionText: string = ''): TtgUpdateSubscriber; static;
+  end;
+
   TtgClient = class
   private
     FBaseUrl: string;
     FToken: string;
     FLastUpdateId: Int64;
+    FDoPolling: Boolean;
+    FSubscribers: TList<TtgUpdateSubscriber>;
+    function ProccessUpdate(u: TtgUpdate): Boolean;
   public
     constructor Create(const AToken: string);
+    destructor Destroy; override;
     function BuildUrl(const Method: string): string;
     function BuildDownloadFileUrl(const FilePath: string): string;
     function Get(const Method, Json: string): Boolean; overload;
@@ -471,13 +483,16 @@ type
     function GetMe(out Value: TtgUserResponse): Boolean;
     function GetUpdates(out Value: TtgUpdates): Boolean; overload;
     function GetFile(const FileId: string; Stream: TStream): Boolean;
-    function Polling(Proc: TtgUpdateProc): Boolean; overload;
+    procedure Polling(Proc: TtgUpdateProc = nil); overload;
+    procedure StopPolling;
     procedure Hello;
     procedure SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = '');
     procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string); overload;
     procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream); overload;
     procedure SendPoll(Params: TtgPollParams; var Message: TtgMessage);
     procedure SendAudio(Params: TtgAudioParams; var Message: TtgMessage);
+    procedure Subscribe(Func: TtgUpdateFunc; const Text: string = ''); overload;
+    procedure Unsubscribe(Func: TtgUpdateFunc);
     property BaseUrl: string read FBaseUrl write FBaseUrl;
     property LastUpdateId: Int64 read FLastUpdateId write FLastUpdateId;
     property Token: string read FToken write FToken;
@@ -572,6 +587,26 @@ begin
     Resp.Free;
 end;
 
+procedure TtgClient.StopPolling;
+begin
+  FDoPolling := True;
+end;
+
+procedure TtgClient.Subscribe(Func: TtgUpdateFunc; const Text: string);
+begin
+  FSubscribers.Add(TtgUpdateSubscriber.Create(Func, Text));
+end;
+
+procedure TtgClient.Unsubscribe(Func: TtgUpdateFunc);
+begin
+  for var i := 0 to Pred(FSubscribers.Count) do
+    if FSubscribers[i].Func = TtgUpdateFunc(Func) then
+    begin
+      FSubscribers.Delete(i);
+      Exit;
+    end;
+end;
+
 function TtgClient.BuildDownloadFileUrl(const FilePath: string): string;
 begin
   Result := Format('%s/file/bot%s/%s', [FBaseUrl, FToken, FilePath]);
@@ -585,8 +620,15 @@ end;
 constructor TtgClient.Create(const AToken: string);
 begin
   inherited Create;
+  FSubscribers := TList<TtgUpdateSubscriber>.Create;
   FBaseUrl := 'https://api.telegram.org';
   FToken := AToken;
+end;
+
+destructor TtgClient.Destroy;
+begin
+  FSubscribers.Free;
+  inherited;
 end;
 
 function TtgClient.Get(const Method, Json: string): Boolean;
@@ -650,15 +692,42 @@ begin
   end;
 end;
 
-function TtgClient.Polling(Proc: TtgUpdateProc): Boolean;
+function TtgClient.ProccessUpdate(u: TtgUpdate): Boolean;
 begin
-  while True do
+  Result := False;
+  for var Subscriber in FSubscribers do
+  begin
+    if Subscriber.ConditionText.IsEmpty then
+    begin
+      if Subscriber.Func(u) then
+        Exit(True);
+    end
+    else
+    begin
+      if Assigned(u.Message) and (u.Message.Text.Trim = Subscriber.ConditionText) then
+        if Subscriber.Func(u) then
+          Exit(True);
+    end;
+  end;
+end;
+
+procedure TtgClient.Polling(Proc: TtgUpdateProc);
+begin
+  FDoPolling := True;
+  while FDoPolling do
   begin
     var Updates: TtgUpdates;
     if GetUpdates(Updates) then
     try
       for var u in Updates.Result do
-        Proc(u);
+        if FDoPolling then
+        begin
+          if not ProccessUpdate(u) then
+            if Assigned(Proc) then
+              Proc(u);
+        end
+        else
+          Exit;
     finally
       Updates.Free;
     end;
@@ -962,6 +1031,14 @@ begin
   if Assigned(FUser) then
     FUser.Free;
   inherited;
+end;
+
+{ TtgUpdateSubscriber }
+
+class function TtgUpdateSubscriber.Create(Func: TtgUpdateFunc; const ConditionText: string): TtgUpdateSubscriber;
+begin
+  Result.Func := Func;
+  Result.ConditionText := ConditionText;
 end;
 
 end.
