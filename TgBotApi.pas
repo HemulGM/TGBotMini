@@ -474,8 +474,8 @@ type
     function Polling(Proc: TtgUpdateProc): Boolean; overload;
     procedure Hello;
     procedure SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = '');
-    procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileNames: TArray<string>); overload;
-    procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileNames: TArray<string>; Streams: TArray<TStream>); overload;
+    procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string); overload;
+    procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream); overload;
     procedure SendPoll(Params: TtgPollParams; var Message: TtgMessage);
     procedure SendAudio(Params: TtgAudioParams; var Message: TtgMessage);
     property BaseUrl: string read FBaseUrl write FBaseUrl;
@@ -532,29 +532,19 @@ begin
   end;
 end;
 
-procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileNames: TArray<string>);
+procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string);
 var
-  Streams: TObjectList<TStream>;
-  FNs: TStringList;
+  Stream: TStream;
 begin
-  Streams := TObjectList<TStream>.Create;
-  FNs := TStringList.Create;
+  Stream := TFileStream.Create(FileName, fmShareDenyWrite);
   try
-    for var FileName in FileNames do
-    try
-      Streams.Add(TFileStream.Create(FileName, fmShareDenyWrite));
-      FNs.Add(ExtractFileName(FileName));
-    except
-      // skip
-    end;
-    SendPhotoToChat(ChatId, Caption, FNs.ToStringArray, Streams.ToArray);
+    SendPhotoToChat(ChatId, Caption, FileName, Stream);
   finally
-    FNs.Free;
-    Streams.Free;
+    Stream.Free;
   end;
 end;
 
-procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileNames: TArray<string>; Streams: TArray<TStream>);
+procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream);
 var
   Resp: TStringStream;
   Fields: TStringList;
@@ -562,13 +552,13 @@ begin
   Resp := TStringStream.Create;
   Fields := TStringList.Create;
   try
-    for var Stream in Streams do
-    begin
-      Stream.Position := 0;
-      Fields.Add('photo' + Fields.Count.ToString);
-    end;
-    TDownload.PostFile(Format(BuildUrl('sendPhoto') + '?chat_id=%d&caption=%s',
-      [ChatId, TURLEncoding.URL.Encode(Caption)]), Fields.ToStringArray, FileNames, Streams, Resp);
+    Stream.Position := 0;
+    Fields.Add('photo');
+    if not TDownload.PostFile(
+      Format(BuildUrl('sendPhoto') + '?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]),
+      Fields.ToStringArray, [FileName], [Stream], Resp)
+      then
+      Writeln('Error: ' + Resp.DataString);
   finally
     Fields.Free;
     Resp.Free;
