@@ -4,15 +4,25 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Json, REST.Json, System.Net.HttpClient,
-  REST.JsonReflect, REST.Json.Interceptors, HGM.Common.Download, HGM.JSONParams,
-  System.Generics.Collections;
+  REST.JsonReflect, REST.Json.Interceptors, HGM.JSONParams,
+  System.Generics.Collections, System.Net.Mime;
 
 {$SCOPEDENUMS ON}
 
 type
+  TtgException = class(Exception)
+  private
+    FCode: Int64;
+    procedure SetCode(const Value: Int64);
+  public
+    property Code: Int64 read FCode write SetCode;
+    constructor Create(const Code: Int64; const Message: string); reintroduce;
+  end;
+
   TtgObject = class
+  public
     constructor Create; virtual;
-    function ToString: string; override;
+    function ToString(AutoFree: Boolean = False): string; reintroduce;
   end;
 
   TtgMessageNew = class(TtgObject)
@@ -322,7 +332,7 @@ type
   TtgResponse = class(TtgObject)
   private
     FOk: Boolean;
-    FError_code: int64;
+    FError_code: Int64;
     FDescription: string;
   public
     property Ok: Boolean read FOk;
@@ -416,7 +426,7 @@ type
     constructor Create; overload;
     constructor Create(Keys: TtgInlineKeysArray); overload;
     destructor Destroy; override;
-    function ToString: string; override;
+    function ToString(AutoFree: Boolean = False): string; reintroduce;
   end;
 
   TtgReplyKeyboardMarkup = class
@@ -426,7 +436,7 @@ type
     constructor Create; overload;
     constructor Create(Keys: TtgKeysArray); overload;
     destructor Destroy; override;
-    function ToString: string; override;
+    function ToString(AutoFree: Boolean = False): string; reintroduce;
   end;
 
   TtgUpdateFunc = reference to function(Update: TtgUpdate): Boolean;
@@ -464,7 +474,7 @@ type
     class function Create(Func: TtgUpdateFunc; const ConditionText: string = ''): TtgUpdateSubscriber; static;
   end;
 
-  TOnTextOut = procedure (Source:string; text:string) of object;
+  TOnTextOut = reference to procedure(const Text: string);
 
   TtgClient = class
   private
@@ -472,129 +482,143 @@ type
     FToken: string;
     FLastUpdateId: Int64;
     FDoPolling: Boolean;
-    fOnTextOut:TOnTextOut;
+    FOnTextOut: TOnTextOut;
     FSubscribers: TList<TtgUpdateSubscriber>;
+    FLogging: Boolean;
     function ProccessUpdate(u: TtgUpdate): Boolean;
+    procedure SetLogging(const Value: Boolean);
+    procedure DoError(Response: TStringStream);
+    function GetIsStop: Boolean;
+  protected
+    procedure DoTextOut(const Text: string);
   public
     constructor Create(const AToken: string);
     destructor Destroy; override;
+    //
     function BuildUrl(const Method: string): string;
     function BuildDownloadFileUrl(const FilePath: string): string;
-    function Get(const Method, Json: string): Boolean; overload;
-    function Get(const Method, Json: string; Stream: TStream): Boolean; overload;
-    function Get<T: class, constructor>(out Value: T; const Method: string; const Json: string = ''): Boolean; overload;
-    function GetMe(out Value: TtgUserResponse): Boolean;
-    function GetUpdates(out Value: TtgUpdates): Boolean; overload;
-    function GetFile(const FileId: string; Stream: TStream): Boolean;
+    //
+    function Execute<T: class, constructor>(const Method: string; const Json: string = ''): T; overload;
+    function Execute<T: class, constructor>(const Method: string; const Form: TMultipartFormData): T; overload;
+    //
+    function GetMe: TtgUserResponse;
+    function GetUpdates: TtgUpdates;
+    function SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = ''): TtgMessageResponse;
+    function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse; overload;
+    function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse; overload;
+    function SendPoll(Params: TtgPollParams): TtgMessageResponse;
+    function SendAudio(Params: TtgAudioParams): TtgMessageResponse;
+    //
+    procedure GetFile(const FileId: string; Stream: TStream);
+    //
     procedure Polling(Proc: TtgUpdateProc = nil); overload;
     procedure StopPolling;
     procedure Hello;
-    procedure SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = '');
-    procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string); overload;
-    procedure SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream); overload;
-    procedure SendPoll(Params: TtgPollParams; var Message: TtgMessage);
-    procedure SendAudio(Params: TtgAudioParams; var Message: TtgMessage);
+    //
     procedure Subscribe(Func: TtgUpdateFunc; const Text: string = ''); overload;
     procedure Unsubscribe(Func: TtgUpdateFunc);
-    procedure TextOut(Source:string; text:string; DoLn:boolean=true);
+    //
     property BaseUrl: string read FBaseUrl write FBaseUrl;
     property LastUpdateId: Int64 read FLastUpdateId write FLastUpdateId;
     property Token: string read FToken write FToken;
-    property OnTextOut: TOnTextOut read fOnTextOut write fOnTextOut;
+    property OnTextOut: TOnTextOut read FOnTextOut write FOnTextOut;
+    property Logging: Boolean read FLogging write SetLogging;
+    property IsStop: Boolean read GetIsStop;
   end;
 
 implementation
 
 uses
-  HGm.ArrayHelper, System.NetEncoding;
+  HGM.ArrayHelper, System.NetConsts, System.Net.URLClient, System.NetEncoding;
 
 { TtgClient }
 
 procedure TtgClient.Hello;
 begin
-  TextOut('', 'Telegram Bot Mini API Inited', false);
-  var Me: TtgUserResponse;
-  if GetMe(Me) then
-    with Me do
-    try
-      if Ok and Assigned(Me.Result) then
-        TextOut(' - ', Me.Result.Username);
-    finally
-      Free;
-    end;
-end;
-
-function TtgClient.GetMe(out Value: TtgUserResponse): Boolean;
-begin
-  Result := Get(Value, 'getMe');
-end;
-
-procedure TtgClient.SendAudio(Params: TtgAudioParams; var Message: TtgMessage);
-begin
-  var Resp: TtgMessageResponse := nil;
-  if Get(Resp, 'sendAudio', Params.ToJsonString) then
-    Resp.Free;
-end;
-
-procedure TtgClient.SendMessageToChat(ChatId: Int64; const Text, KeyBoard: string);
-begin
-  var Message := TtgMessageNew.Create;
+  DoTextOut('Telegram Bot Mini API Inited');
+  var Me := GetMe;
   try
-    Message.ChatId := ChatId;
-    Message.Text := Text;
-    if not KeyBoard.IsEmpty then
-      Message.ReplyMarkup := KeyBoard;
-    var Resp: TtgMessageResponse := nil;
-    if Get(Resp, 'sendMessage', Message.ToString) then
-      Resp.Free;
+    if Assigned(Me.Result) then
+      DoTextOut('Bot name is ' + Me.Result.Username);
   finally
-    Message.Free;
+    Me.Free;
   end;
 end;
 
-procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string);
-var
-  Stream: TStream;
+function TtgClient.GetMe: TtgUserResponse;
 begin
-  Stream := TFileStream.Create(FileName, fmShareDenyWrite);
+  Result := Execute<TtgUserResponse>('getMe');
+end;
+
+function TtgClient.SendAudio(Params: TtgAudioParams): TtgMessageResponse;
+begin
+  Result := Execute<TtgMessageResponse>('sendAudio', Params.ToJsonString);
+end;
+
+function TtgClient.SendMessageToChat(ChatId: Int64; const Text, KeyBoard: string): TtgMessageResponse;
+begin
+  var Message := TtgMessageNew.Create;
+  Message.ChatId := ChatId;
+  Message.Text := Text;
+  if not KeyBoard.IsEmpty then
+    Message.ReplyMarkup := KeyBoard;
+  Result := Execute<TtgMessageResponse>('sendMessage', Message.ToString(True));
+end;
+
+function TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse;
+begin
+  var Stream := TFileStream.Create(FileName, fmShareDenyWrite);
   try
-    SendPhotoToChat(ChatId, Caption, FileName, Stream);
+    Result := SendPhotoToChat(ChatId, Caption, FileName, Stream);
   finally
     Stream.Free;
   end;
 end;
 
-procedure TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream);
-var
-  Resp: TStringStream;
-  Fields: TStringList;
+procedure TtgClient.DoError(Response: TStringStream);
 begin
-  Resp := TStringStream.Create;
-  Fields := TStringList.Create;
+  var ErrorText := 'Unknown error';
+  var ErrorCode: Int64 := -1;
   try
-    Stream.Position := 0;
-    Fields.Add('photo');
-    if not TDownload.PostFile(
-      Format(BuildUrl('sendPhoto') + '?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]),
-      Fields.ToStringArray, [FileName], [Stream], Resp)
-      then
-      TextOut('', 'Error: ' + Resp.DataString);
+    var RespObj := TJSON.JsonToObject<TtgResponse>(Response.DataString);
+    if Assigned(RespObj) then
+    try
+      ErrorText := 'TgError ' + RespObj.ErrorCode.ToString + ' - ' + RespObj.Description;
+    finally
+      RespObj.Free;
+    end;
+  except
+    //
+  end;
+  raise TtgException.Create(ErrorCode, ErrorText);
+end;
+
+function TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse;
+var
+  Form: TMultipartFormData;
+begin
+  Form := TMultipartFormData.Create;
+  try
+    Form.AddStream('photo', Stream, FileName);
+    Result := Execute<TtgMessageResponse>(Format('sendPhoto?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
   finally
-    Fields.Free;
-    Resp.Free;
+    Form.Free;
   end;
 end;
 
-procedure TtgClient.SendPoll(Params: TtgPollParams; var Message: TtgMessage);
+function TtgClient.SendPoll(Params: TtgPollParams): TtgMessageResponse;
 begin
-  var Resp: TtgMessageResponse := nil;
-  if Get(Resp, 'sendPoll', Params.ToJsonString) then
-    Resp.Free;
+  Result := Execute<TtgMessageResponse>('sendPoll', Params.ToJsonString);
+end;
+
+procedure TtgClient.SetLogging(const Value: Boolean);
+begin
+  FLogging := Value;
 end;
 
 procedure TtgClient.StopPolling;
 begin
-  FDoPolling := True;
+  FDoPolling := False;
 end;
 
 procedure TtgClient.Subscribe(Func: TtgUpdateFunc; const Text: string);
@@ -602,16 +626,10 @@ begin
   FSubscribers.Add(TtgUpdateSubscriber.Create(Func, Text));
 end;
 
-procedure TtgClient.TextOut(Source, text: string; DoLn: boolean);
+procedure TtgClient.DoTextOut(const Text: string);
 begin
-  if IsConsole then
-    case DoLn of
-      true:  writeln(Source, text);
-      false: write(Source, text);
-    end
-
-  else
-    if Assigned(OnTextOut) then  OnTextOut(Source, text);
+  if Assigned(OnTextOut) then
+    OnTextOut(Text);
 end;
 
 procedure TtgClient.Unsubscribe(Func: TtgUpdateFunc);
@@ -648,65 +666,100 @@ begin
   inherited;
 end;
 
-function TtgClient.Get(const Method, Json: string): Boolean;
-begin
-  var Response: string;
-  Result := TDownload.PostJson(BuildUrl(Method), Json, Response);
-end;
-
-function TtgClient.Get(const Method, Json: string; Stream: TStream): Boolean;
-begin
-  Result := TDownload.PostJson(BuildUrl(Method), Json, Stream);
-end;
-
-function TtgClient.Get<T>(out Value: T; const Method, Json: string): Boolean;
-begin
-  Value := nil;
-  var Response: string;
-  TDownload.PostJson(BuildUrl(Method), Json, Response);
-  try
-    TextOut('', Response);
-    Value := TJSON.JsonToObject<T>(Response);
-    Result := Assigned(Value);
-  except
-    Result := False;
-  end;
-end;
-
-function TtgClient.GetFile(const FileId: string; Stream: TStream): Boolean;
+function TtgClient.Execute<T>(const Method: string; const Json: string): T;
 var
-  Value: TtgGetFileResponse;
+  Response: TStringStream;
+  StatusCode: Integer;
 begin
-  Result := False;
-  var Params := TtgGetFile.Create;
+  if Method.IsEmpty then
+    raise TtgException.Create(-1, 'Method is empty');
+  Result := nil;
+  var HTTP := THTTPClient.Create;
+  Response := TStringStream.Create;
   try
-    Params.FileId := FileId;
-    if Get(Value, 'getFile', Params.ToString) then
+    HTTP.HandleRedirects := True;
+    HTTP.ContentType := 'application/json';
+    var Body := TStringStream.Create;
     try
-      Result := TDownload.Get(BuildDownloadFileUrl(Value.Result.FilePath), Stream);
+      Body.WriteString(Json);
+      Body.Position := 0;
+      StatusCode := HTTP.Post(BuildUrl(Method), Body, Response).StatusCode;
     finally
-      Value.Free;
+      Body.Free;
     end;
+    if StatusCode = 200 then
+      Result := TJSON.JsonToObject<T>(Response.DataString)
+    else
+      DoError(Response);
+    if not Assigned(Result) then
+      raise TtgException.Create(-1, 'Empty object');
   finally
-    Params.Free;
+    HTTP.Free;
+    Response.Free;
   end;
 end;
 
-function TtgClient.GetUpdates(out Value: TtgUpdates): Boolean;
+function TtgClient.Execute<T>(const Method: string; const Form: TMultipartFormData): T;
+var
+  Response: TStringStream;
+  StatusCode: Integer;
 begin
-  Result := False;
-  var Params := TtgUpdateNew.Create;
+  if Method.IsEmpty then
+    raise TtgException.Create(-1, 'Method is empty');
+  Result := nil;
+  var HTTP := THTTPClient.Create;
+  Response := TStringStream.Create;
   try
-    Params.Offset := FLastUpdateId;
-    if Get(Value, 'getUpdates', Params.ToString) then
-    begin
-      Result := True;
-      if Value.Ok and (Length(Value.Result) > 0) then
-        FLastUpdateId := Value.Result[High(Value.Result)].UpdateId + 1;
+    HTTP.HandleRedirects := True;
+    HTTP.ContentType := 'application/json';
+    StatusCode := HTTP.Post(BuildUrl(Method), Form, Response).StatusCode;
+    if StatusCode = 200 then
+      Result := TJSON.JsonToObject<T>(Response.DataString)
+    else
+      DoError(Response);
+    if not Assigned(Result) then
+      raise TtgException.Create(-1, 'Empty object');
+  finally
+    HTTP.Free;
+    Response.Free;
+  end;
+end;
+
+procedure TtgClient.GetFile(const FileId: string; Stream: TStream);
+var
+  HTTP: THTTPClient;
+begin
+  var Params := TtgGetFile.Create;
+  Params.FileId := FileId;
+  var Value := Execute<TtgGetFileResponse>('getFile', Params.ToString(True));
+  try
+    Stream.Size := 0;
+    HTTP := THTTPClient.Create;
+    try
+      HTTP.HandleRedirects := True;
+      if HTTP.Get(BuildDownloadFileUrl(Value.Result.FilePath), Stream).StatusCode <> 200 then
+        raise TtgException.Create(-1, 'Download error');
+      Stream.Position := 0;
+    finally
+      HTTP.Free;
     end;
   finally
-    Params.Free;
+    Value.Free;
   end;
+end;
+
+function TtgClient.GetIsStop: Boolean;
+begin
+  Result := not FDoPolling;
+end;
+
+function TtgClient.GetUpdates: TtgUpdates;
+begin
+  var Params := TtgUpdateNew.Create;
+  Params.Offset := FLastUpdateId;
+  Result := Execute<TtgUpdates>('getUpdates', Params.ToString(True));
+  if Result.Ok and (Length(Result.Result) > 0) then
+    FLastUpdateId := Result.Result[High(Result.Result)].UpdateId + 1;
 end;
 
 function TtgClient.ProccessUpdate(u: TtgUpdate): Boolean;
@@ -733,8 +786,7 @@ begin
   FDoPolling := True;
   while FDoPolling do
   begin
-    var Updates: TtgUpdates;
-    if GetUpdates(Updates) then
+    var Updates := GetUpdates;
     try
       for var u in Updates.Result do
         if FDoPolling then
@@ -758,17 +810,19 @@ begin
   inherited;
 end;
 
-function TtgObject.ToString: string;
+function TtgObject.ToString(AutoFree: Boolean): string;
 begin
   Result := TJSON.ObjectToJsonString(Self, [joIgnoreEmptyStrings, joIgnoreEmptyArrays]);
+  if AutoFree then
+    Free;
 end;
 
 { TtgMessage }
 
 destructor TtgMessage.Destroy;
 begin
-  if Assigned(Ffrom) then
-    Ffrom.Free;
+  if Assigned(FFrom) then
+    FFrom.Free;
   if Assigned(FLocation) then
     FLocation.Free;
   if Assigned(FDocument) then
@@ -867,9 +921,11 @@ begin
   inherited;
 end;
 
-function TtgInlineKeyboardMarkup.ToString: string;
+function TtgInlineKeyboardMarkup.ToString(AutoFree: Boolean): string;
 begin
   Result := FJSON.ToJSON;
+  if AutoFree then
+    Free;
 end;
 
 { TtgReplyKeyboardMarkup }
@@ -904,9 +960,11 @@ begin
   inherited;
 end;
 
-function TtgReplyKeyboardMarkup.ToString: string;
+function TtgReplyKeyboardMarkup.ToString(AutoFree: Boolean): string;
 begin
   Result := FJSON.ToJSON;
+  if AutoFree then
+    Free;
 end;
 
 { TtgCallbackQuery }
@@ -1056,6 +1114,19 @@ class function TtgUpdateSubscriber.Create(Func: TtgUpdateFunc; const ConditionTe
 begin
   Result.Func := Func;
   Result.ConditionText := ConditionText;
+end;
+
+{ TtgException }
+
+constructor TtgException.Create(const Code: Int64; const Message: string);
+begin
+  inherited Create(Message);
+  FCode := Code;
+end;
+
+procedure TtgException.SetCode(const Value: Int64);
+begin
+  FCode := Value;
 end;
 
 end.

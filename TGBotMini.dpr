@@ -13,6 +13,12 @@ uses
 begin
   ReportMemoryLeaksOnShutdown := True;
   Client := TtgClient.Create({$INCLUDE BOT_TOKEN.key});
+  Client.Logging := True;
+  Client.OnTextOut :=
+    procedure(const Text: string)
+    begin
+      Writeln(Text);
+    end;
   Client.Subscribe(Logging);
   Client.Subscribe(UploadAllFiles);
   Client.Subscribe(ProcCallbackQuery);
@@ -25,10 +31,13 @@ begin
   try
     Client.Hello;
     Client.Polling;
+    if Client.IsStop then
+      Break;
     Sleep(5000);
   except
     on E: Exception do
       Writeln('Error: ' + E.Message);
   end;
+  Client.Free;
 end.
 
