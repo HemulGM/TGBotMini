@@ -6,9 +6,9 @@ uses
   TgBotApi in 'TgBotApi.pas',
   TgBotApi.Client in 'TgBotApi.Client.pas',
   HGM.JSONParams in 'JSONParam\HGM.JSONParams.pas',
-  HGM.ArrayHelpers in 'ArrayHelpers\HGM.ArrayHelpers.pas',
   TgBotProc.Test in 'TgBotProc.Test.pas',
-  TgBotProc.BlogItBlackCat in 'TgBotProc.BlogItBlackCat.pas';
+  TgBotProc.BlogItBlackCat in 'TgBotProc.BlogItBlackCat.pas',
+  HGM.ArrayHelpers in 'ArrayHelpers\HGM.ArrayHelpers.pas';
 
 begin
   ReportMemoryLeaksOnShutdown := True;

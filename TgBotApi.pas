@@ -526,10 +526,29 @@ type
     property IsStop: Boolean read GetIsStop;
   end;
 
+  TArrayHelp = class
+  public
+    class procedure FreeArrayOfObject<T: class>(var Target: TArray<T>); overload; inline; static;
+  end;
+
 implementation
 
 uses
-  HGM.ArrayHelper, System.NetConsts, System.Net.URLClient, System.NetEncoding;
+  System.NetConsts, System.Net.URLClient, System.NetEncoding;
+
+class procedure TArrayHelp.FreeArrayOfObject<T>(var Target: TArray<T>);
+  {$IFNDEF AUTOREFCOUNT}
+var
+  Item: T;
+  {$ENDIF}
+begin
+  {$IFNDEF AUTOREFCOUNT}
+  for Item in Target do
+    if Assigned(Item) then
+      Item.Free;
+  SetLength(Target, 0);
+  {$ENDIF}
+end;
 
 { TtgClient }
 
