@@ -7,7 +7,6 @@ uses
   TgBotApi.Client in 'TgBotApi.Client.pas',
   HGM.JSONParams in 'JSONParam\HGM.JSONParams.pas',
   TgBotProc.Test in 'TgBotProc.Test.pas',
-  TgBotProc.BlogItBlackCat in 'TgBotProc.BlogItBlackCat.pas',
   HGM.ArrayHelpers in 'ArrayHelpers\HGM.ArrayHelpers.pas';
 
 begin
@@ -31,12 +30,12 @@ begin
   try
     Client.Hello;
     Client.Polling;
-    if Client.IsStop then
-      Break;
-    Sleep(5000);
   except
     on E: Exception do
+    begin
       Writeln('Error: ' + E.Message);
+      Sleep(5000);
+    end;
   end;
   Client.Free;
 end.

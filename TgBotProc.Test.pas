@@ -5,19 +5,35 @@ interface
 uses
   System.SysUtils, TgBotApi, TgBotApi.Client;
 
+[TTgUpdateSubscribe]
+
 function ProcMenu(u: TtgUpdate): Boolean;
+
+[TTgUpdateSubscribe]
 
 function ProcStart(u: TtgUpdate): Boolean;
 
+[TTgUpdateSubscribe]
+
 function ProcInfo(u: TtgUpdate): Boolean;
+
+[TTgUpdateSubscribe]
 
 function ProcA(u: TtgUpdate): Boolean;
 
+[TTgUpdateSubscribe]
+
 function ProcPhoto(u: TtgUpdate): Boolean;
+
+[TTgUpdateSubscribe]
 
 function ProcCallbackQuery(u: TtgUpdate): Boolean;
 
+[TTgUpdateSubscribe]
+
 function UploadAllFiles(u: TtgUpdate): Boolean;
+
+[TTgUpdateSubscribe]
 
 function Logging(u: TtgUpdate): Boolean;
 

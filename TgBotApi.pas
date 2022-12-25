@@ -10,6 +10,8 @@ uses
 {$SCOPEDENUMS ON}
 
 type
+  TTgUpdateSubscribe = class(TCustomAttribute);
+
   TtgException = class(Exception)
   private
     FCode: Int64;
@@ -41,8 +43,8 @@ type
     FChat_id: int64;
     FMessage_id: int64;
   public
-    property chat_id: int64 read FChat_id write FChat_id;
-    property message_id : int64 read FMessage_id write FMessage_id;
+    property ChatId: int64 read FChat_id write FChat_id;
+    property MessageId: int64 read FMessage_id write FMessage_id;
   end;
 
   TtgUser = class(TtgObject)
@@ -420,7 +422,7 @@ type
   TtgUpdates = TtgResponseItems<TtgUpdate>;
 
   /// <summary>
-  /// Title, Command
+  /// Title, Command, Url
   /// </summary>
   TtgKey = TArray<string>;
 
@@ -498,6 +500,7 @@ type
     procedure SetLogging(const Value: Boolean);
     procedure DoError(Response: TStringStream);
     function GetIsStop: Boolean;
+    procedure CollectSubscribers;
   protected
     procedure DoTextOut(const Text: string);
   public
@@ -517,7 +520,6 @@ type
     function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse; overload;
     function SendPoll(Params: TtgPollParams): TtgMessageResponse;
     function SendAudio(Params: TtgAudioParams): TtgMessageResponse;
-
     function DeleteMessage(ChatId: Int64; MessageId: Int64): TtgMessageResponse;
     //
     procedure GetFile(const FileId: string; Stream: TStream);
@@ -545,7 +547,7 @@ type
 implementation
 
 uses
-  System.NetConsts, System.Net.URLClient, System.NetEncoding;
+  System.NetConsts, System.Net.URLClient, System.NetEncoding, System.Rtti;
 
 class procedure TArrayHelp.FreeArrayOfObject<T>(var Target: TArray<T>);
   {$IFNDEF AUTOREFCOUNT}
@@ -682,19 +684,27 @@ begin
   Result := Format('%s/bot%s/%s', [FBaseUrl, FToken, Method]);
 end;
 
+procedure TtgClient.CollectSubscribers;
+var
+  Context: TRttiContext;
+begin
+  //Context.GetType(TTgUpdateSubscribe)
+end;
+
 constructor TtgClient.Create(const AToken: string);
 begin
   inherited Create;
   FSubscribers := TList<TtgUpdateSubscriber>.Create;
   FBaseUrl := 'https://api.telegram.org';
   FToken := AToken;
+  CollectSubscribers;
 end;
 
-function TtgClient.DeleteMessage(ChatId, MessageId: Int64):TtgMessageResponse;
+function TtgClient.DeleteMessage(ChatId, MessageId: Int64): TtgMessageResponse;
 begin
   var Msg := TtgMessageDel.Create;
-  Msg.chat_id := ChatId;
-  Msg.message_id := MessageId;
+  Msg.ChatId := ChatId;
+  Msg.MessageId := MessageId;
   Result := Execute<TtgMessageResponse>('deleteMessage', Msg.ToString(True));
 end;
 
@@ -796,7 +806,7 @@ begin
   var Params := TtgUpdateNew.Create;
   Params.Offset := FLastUpdateId;
   Result := Execute<TtgUpdates>('getUpdates', Params.ToString(True));
-  if Result.Ok and (Length(Result.Result) > 0) then
+  if Length(Result.Result) > 0 then
     FLastUpdateId := Result.Result[High(Result.Result)].UpdateId + 1;
 end;
 
@@ -939,11 +949,15 @@ begin
     KB.Add(JSRow);
     for var Button in Row do
     begin
-      var JSButton := TJSONObject.Create;
-      JSButton.AddPair('text', Button[0]);
-      JSButton.AddPair('callback_data', Button[1]);
-      JSButton.AddPair('url', Button[2]);
-      JSRow.Add(JSButton);
+      if Length(Button) > 1 then
+      begin
+        var JSButton := TJSONObject.Create;
+        JSButton.AddPair('text', Button[0]);
+        JSButton.AddPair('callback_data', Button[1]);
+        if Length(Button) > 2 then
+          JSButton.AddPair('url', Button[2]);
+        JSRow.Add(JSButton);
+      end;
     end;
   end;
 end;
@@ -988,8 +1002,6 @@ begin
     begin
       var JSButton := TJSONObject.Create;
       JSButton.AddPair('text', Button);
-      //JSButton.AddPair('resize_keyboard', 'true');
-      //JSButton.AddPair('request_contact', Button);
       JSRow.Add(JSButton);
     end;
   end;

@@ -155,7 +155,6 @@
         <DCCReference Include="TgBotApi.Client.pas"/>
         <DCCReference Include="JSONParam\HGM.JSONParams.pas"/>
         <DCCReference Include="TgBotProc.Test.pas"/>
-        <DCCReference Include="TgBotProc.BlogItBlackCat.pas"/>
         <DCCReference Include="ArrayHelpers\HGM.ArrayHelpers.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
