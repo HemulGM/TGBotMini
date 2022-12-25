@@ -21,6 +21,8 @@ type
     constructor Create(const Code: Int64; const Message: string); reintroduce;
   end;
 
+  TtgBadRequest = class(TtgException);
+
   TtgObject = class
   public
     constructor Create; virtual;
@@ -359,6 +361,15 @@ type
     destructor Destroy; override;
   end;
 
+  TtgResponseSimple<T> = class(TtgResponse)
+  private
+    FResult: T;
+  public
+    property Result: T read FResult;
+  end;
+
+  TtgResponseDelete = TtgResponseSimple<Boolean>;
+
   TtgResponseItems<T: class, constructor> = class(TtgResponse)
   private
     FResult: TArray<T>;
@@ -498,7 +509,7 @@ type
     FLogging: Boolean;
     function ProccessUpdate(u: TtgUpdate): Boolean;
     procedure SetLogging(const Value: Boolean);
-    procedure DoError(Response: TStringStream);
+    procedure DoError(Response: TStringStream; StatusCode: Integer);
     function GetIsStop: Boolean;
     procedure CollectSubscribers;
   protected
@@ -520,7 +531,7 @@ type
     function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse; overload;
     function SendPoll(Params: TtgPollParams): TtgMessageResponse;
     function SendAudio(Params: TtgAudioParams): TtgMessageResponse;
-    function DeleteMessage(ChatId: Int64; MessageId: Int64): TtgMessageResponse;
+    procedure DeleteMessage(ChatId: Int64; MessageId: Int64);
     //
     procedure GetFile(const FileId: string; Stream: TStream);
     //
@@ -607,20 +618,26 @@ begin
   end;
 end;
 
-procedure TtgClient.DoError(Response: TStringStream);
+procedure TtgClient.DoError(Response: TStringStream; StatusCode: Integer);
 begin
   var ErrorText := 'Unknown error';
-  var ErrorCode: Int64 := -1;
+  var ErrorCode: Int64 := StatusCode;
+  var RespObj: TtgResponse;
   try
-    var RespObj := TJSON.JsonToObject<TtgResponse>(Response.DataString);
-    if Assigned(RespObj) then
-    try
-      ErrorText := 'TgError ' + RespObj.ErrorCode.ToString + ' - ' + RespObj.Description;
-    finally
-      RespObj.Free;
-    end;
+    RespObj := TJSON.JsonToObject<TtgResponse>(Response.DataString);
   except
-    //
+    RespObj := nil;
+  end;
+  if Assigned(RespObj) then
+  try
+    ErrorText := RespObj.Description;
+    ErrorCode := RespObj.ErrorCode;
+    case RespObj.ErrorCode of
+      400:
+        raise TtgBadRequest.Create(ErrorCode, ErrorText);
+    end;
+  finally
+    RespObj.Free;
   end;
   raise TtgException.Create(ErrorCode, ErrorText);
 end;
@@ -685,8 +702,8 @@ begin
 end;
 
 procedure TtgClient.CollectSubscribers;
-var
-  Context: TRttiContext;
+{var
+  Context: TRttiContext;  }
 begin
   //Context.GetType(TTgUpdateSubscribe)
 end;
@@ -700,12 +717,13 @@ begin
   CollectSubscribers;
 end;
 
-function TtgClient.DeleteMessage(ChatId, MessageId: Int64): TtgMessageResponse;
+procedure TtgClient.DeleteMessage(ChatId, MessageId: Int64);
 begin
   var Msg := TtgMessageDel.Create;
   Msg.ChatId := ChatId;
   Msg.MessageId := MessageId;
-  Result := Execute<TtgMessageResponse>('deleteMessage', Msg.ToString(True));
+  var Resp := Execute<TtgResponseDelete>('deleteMessage', Msg.ToString(True));
+  Resp.Free;
 end;
 
 destructor TtgClient.Destroy;
@@ -735,10 +753,12 @@ begin
     finally
       Body.Free;
     end;
+    if FLogging then
+      DoTextOut(Response.DataString);
     if StatusCode = 200 then
       Result := TJSON.JsonToObject<T>(Response.DataString)
     else
-      DoError(Response);
+      DoError(Response, StatusCode);
     if not Assigned(Result) then
       raise TtgException.Create(-1, 'Empty object');
   finally
@@ -764,7 +784,7 @@ begin
     if StatusCode = 200 then
       Result := TJSON.JsonToObject<T>(Response.DataString)
     else
-      DoError(Response);
+      DoError(Response, StatusCode);
     if not Assigned(Result) then
       raise TtgException.Create(-1, 'Empty object');
   finally
@@ -838,10 +858,13 @@ begin
     try
       for var u in Updates.Result do
         if FDoPolling then
-        begin
+        try
           if not ProccessUpdate(u) then
             if Assigned(Proc) then
               Proc(u);
+        except
+          on E: Exception do
+            DoTextOut('Update processing error: "' + E.Message + '"');
         end
         else
           Exit;

@@ -37,6 +37,8 @@ function UploadAllFiles(u: TtgUpdate): Boolean;
 
 function Logging(u: TtgUpdate): Boolean;
 
+function ProcDeleteTest(u: TtgUpdate): Boolean;
+
 implementation
 
 uses
@@ -74,6 +76,17 @@ begin
     end;
   finally
     Msg.Free;
+  end;
+end;
+
+function ProcDeleteTest(u: TtgUpdate): Boolean;
+begin
+  Result := True;
+  try
+    Client.DeleteMessage(-1001525223801, 2236);
+  except
+    on E: TtgBadRequest do
+      Writeln('Сообщение не удалено: ' + E.Message);
   end;
 end;
 

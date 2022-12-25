@@ -21,6 +21,7 @@ begin
   Client.Subscribe(Logging);
   Client.Subscribe(UploadAllFiles);
   Client.Subscribe(ProcCallbackQuery);
+  Client.Subscribe(ProcDeleteTest, '/test_Delete');
   Client.Subscribe(ProcMenu, '/menu');
   Client.Subscribe(ProcStart, '/start');
   Client.Subscribe(ProcInfo, '/info');
