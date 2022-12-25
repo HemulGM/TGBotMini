@@ -36,6 +36,15 @@ type
     property ReplyMarkup: string read FReply_markup write FReply_markup;
   end;
 
+  TtgMessageDel = class(TtgObject)
+  private
+    FChat_id: int64;
+    FMessage_id: int64;
+  public
+    property chat_id: int64 read FChat_id write FChat_id;
+    property message_id : int64 read FMessage_id write FMessage_id;
+  end;
+
   TtgUser = class(TtgObject)
   private
     FFirst_name: string;
@@ -508,6 +517,8 @@ type
     function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse; overload;
     function SendPoll(Params: TtgPollParams): TtgMessageResponse;
     function SendAudio(Params: TtgAudioParams): TtgMessageResponse;
+
+    function DeleteMessage(ChatId: Int64; MessageId: Int64): TtgMessageResponse;
     //
     procedure GetFile(const FileId: string; Stream: TStream);
     //
@@ -677,6 +688,14 @@ begin
   FSubscribers := TList<TtgUpdateSubscriber>.Create;
   FBaseUrl := 'https://api.telegram.org';
   FToken := AToken;
+end;
+
+function TtgClient.DeleteMessage(ChatId, MessageId: Int64):TtgMessageResponse;
+begin
+  var Msg := TtgMessageDel.Create;
+  Msg.chat_id := ChatId;
+  Msg.message_id := MessageId;
+  Result := Execute<TtgMessageResponse>('deleteMessage', Msg.ToString(True));
 end;
 
 destructor TtgClient.Destroy;
@@ -923,6 +942,7 @@ begin
       var JSButton := TJSONObject.Create;
       JSButton.AddPair('text', Button[0]);
       JSButton.AddPair('callback_data', Button[1]);
+      JSButton.AddPair('url', Button[2]);
       JSRow.Add(JSButton);
     end;
   end;
@@ -968,6 +988,8 @@ begin
     begin
       var JSButton := TJSONObject.Create;
       JSButton.AddPair('text', Button);
+      //JSButton.AddPair('resize_keyboard', 'true');
+      //JSButton.AddPair('request_contact', Button);
       JSRow.Add(JSButton);
     end;
   end;
