@@ -463,6 +463,8 @@ type
 
   TtgUpdateFunc = reference to function(Update: TtgUpdate): Boolean;
 
+  TtgUpdateFuncItem = reference to function(Update: TtgUpdate; const Item: string): Boolean;
+
   TtgUpdateProc = reference to procedure(Update: TtgUpdate);
 
   TtgParamsHistory = class(TJSONParam)
@@ -491,9 +493,19 @@ type
   end;
 
   TtgUpdateSubscriber = record
-    ConditionText: string;
+    ConditionText: TArray<string>;
     Func: TtgUpdateFunc;
-    class function Create(Func: TtgUpdateFunc; const ConditionText: string = ''): TtgUpdateSubscriber; static;
+    FuncItem: TtgUpdateFuncItem;
+    function Executed(u: TtgUpdate): Boolean;
+    class function Create(Func: TtgUpdateFunc; const ConditionText: TArray<string> = []): TtgUpdateSubscriber; overload; static;
+    class function Create(Func: TtgUpdateFuncitem; const ConditionText: TArray<string> = []): TtgUpdateSubscriber; overload; static;
+  end;
+
+  TtgCallbackSubscriber = record
+    PayloadText: TArray<string>;
+    Func: TtgUpdateFunc;
+    function Executed(u: TtgUpdate): Boolean;
+    class function Create(Func: TtgUpdateFunc; const PayloadText: TArray<string> = []): TtgCallbackSubscriber; overload; static;
   end;
 
   TOnTextOut = reference to procedure(const Text: string);
@@ -506,6 +518,7 @@ type
     FDoPolling: Boolean;
     FOnTextOut: TOnTextOut;
     FSubscribers: TList<TtgUpdateSubscriber>;
+    FCallBackSubscribers: TList<TtgCallbackSubscriber>;
     FLogging: Boolean;
     function ProccessUpdate(u: TtgUpdate): Boolean;
     procedure SetLogging(const Value: Boolean);
@@ -539,8 +552,14 @@ type
     procedure StopPolling;
     procedure Hello;
     //
+    procedure Subscribe(Func: TtgUpdateFunc; const Text: TArray<string>); overload;
+    procedure Subscribe(Func: TtgUpdateFuncItem; const Text: TArray<string>); overload;
     procedure Subscribe(Func: TtgUpdateFunc; const Text: string = ''); overload;
-    procedure Unsubscribe(Func: TtgUpdateFunc);
+    procedure Subscribe(Func: TtgUpdateFuncItem; const Text: string = ''); overload;
+    procedure SubscribeCallBack(Func: TtgUpdateFunc; const Payload: string); overload;
+    procedure SubscribeCallBack(Func: TtgUpdateFunc; const Payload: TArray<string>); overload;
+    procedure Unsubscribe(Func: TtgUpdateFunc); overload;
+    procedure Unsubscribe(Func: TtgUpdateFuncItem); overload;
     //
     property BaseUrl: string read FBaseUrl write FBaseUrl;
     property LastUpdateId: Int64 read FLastUpdateId write FLastUpdateId;
@@ -558,7 +577,8 @@ type
 implementation
 
 uses
-  System.NetConsts, System.Net.URLClient, System.NetEncoding, System.Rtti;
+  System.NetConsts, System.Net.URLClient, System.NetEncoding, HGM.ArrayHelpers,
+  System.Rtti;
 
 class procedure TArrayHelp.FreeArrayOfObject<T>(var Target: TArray<T>);
   {$IFNDEF AUTOREFCOUNT}
@@ -582,7 +602,7 @@ begin
   var Me := GetMe;
   try
     if Assigned(Me.Result) then
-      DoTextOut('Bot name is ' + Me.Result.Username);
+      DoTextOut('Bot name is ' + Me.Result.FirstName + ' (' + Me.Result.Username + ')');
   finally
     Me.Free;
   end;
@@ -624,7 +644,7 @@ begin
   var ErrorCode: Int64 := StatusCode;
   var RespObj: TtgResponse;
   try
-    RespObj := TJSON.JsonToObject<TtgResponse>(Response.DataString);
+    RespObj := TJSON.JsonToObject<TtgResponse>(Response.DataString, [joIgnoreEmptyStrings, joIgnoreEmptyArrays]);
   except
     RespObj := nil;
   end;
@@ -649,7 +669,8 @@ begin
   Form := TMultipartFormData.Create;
   try
     Form.AddStream('photo', Stream, FileName);
-    Result := Execute<TtgMessageResponse>(Format('sendPhoto?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
+    Result := Execute<TtgMessageResponse>(
+      Format('sendPhoto?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
   finally
     Form.Free;
   end;
@@ -670,9 +691,34 @@ begin
   FDoPolling := False;
 end;
 
-procedure TtgClient.Subscribe(Func: TtgUpdateFunc; const Text: string);
+procedure TtgClient.Subscribe(Func: TtgUpdateFuncItem; const Text: TArray<string>);
 begin
   FSubscribers.Add(TtgUpdateSubscriber.Create(Func, Text));
+end;
+
+procedure TtgClient.Subscribe(Func: TtgUpdateFunc; const Text: TArray<string>);
+begin
+  FSubscribers.Add(TtgUpdateSubscriber.Create(Func, Text));
+end;
+
+procedure TtgClient.Subscribe(Func: TtgUpdateFuncItem; const Text: string);
+begin
+  Subscribe(Func, [Text]);
+end;
+
+procedure TtgClient.SubscribeCallBack(Func: TtgUpdateFunc; const Payload: TArray<string>);
+begin
+  FCallBackSubscribers.Add(TtgCallbackSubscriber.Create(Func, Payload));
+end;
+
+procedure TtgClient.SubscribeCallBack(Func: TtgUpdateFunc; const Payload: string);
+begin
+  FCallBackSubscribers.Add(TtgCallbackSubscriber.Create(Func, [Payload]));
+end;
+
+procedure TtgClient.Subscribe(Func: TtgUpdateFunc; const Text: string);
+begin
+  Subscribe(Func, [Text]);
 end;
 
 procedure TtgClient.DoTextOut(const Text: string);
@@ -685,6 +731,16 @@ procedure TtgClient.Unsubscribe(Func: TtgUpdateFunc);
 begin
   for var i := 0 to Pred(FSubscribers.Count) do
     if FSubscribers[i].Func = TtgUpdateFunc(Func) then
+    begin
+      FSubscribers.Delete(i);
+      Exit;
+    end;
+end;
+
+procedure TtgClient.Unsubscribe(Func: TtgUpdateFuncItem);
+begin
+  for var i := 0 to Pred(FSubscribers.Count) do
+    if FSubscribers[i].FuncItem = TtgUpdateFuncItem(Func) then
     begin
       FSubscribers.Delete(i);
       Exit;
@@ -712,6 +768,7 @@ constructor TtgClient.Create(const AToken: string);
 begin
   inherited Create;
   FSubscribers := TList<TtgUpdateSubscriber>.Create;
+  FCallBackSubscribers := TList<TtgCallbackSubscriber>.Create;
   FBaseUrl := 'https://api.telegram.org';
   FToken := AToken;
   CollectSubscribers;
@@ -729,6 +786,7 @@ end;
 destructor TtgClient.Destroy;
 begin
   FSubscribers.Free;
+  FCallBackSubscribers.Free;
   inherited;
 end;
 
@@ -756,7 +814,7 @@ begin
     if FLogging then
       DoTextOut(Response.DataString);
     if StatusCode = 200 then
-      Result := TJSON.JsonToObject<T>(Response.DataString)
+      Result := TJSON.JsonToObject<T>(Response.DataString, [joIgnoreEmptyStrings, joIgnoreEmptyArrays])
     else
       DoError(Response, StatusCode);
     if not Assigned(Result) then
@@ -781,8 +839,10 @@ begin
     HTTP.HandleRedirects := True;
     HTTP.ContentType := 'application/json';
     StatusCode := HTTP.Post(BuildUrl(Method), Form, Response).StatusCode;
+    if FLogging then
+      DoTextOut(Response.DataString);
     if StatusCode = 200 then
-      Result := TJSON.JsonToObject<T>(Response.DataString)
+      Result := TJSON.JsonToObject<T>(Response.DataString, [joIgnoreEmptyStrings, joIgnoreEmptyArrays])
     else
       DoError(Response, StatusCode);
     if not Assigned(Result) then
@@ -832,21 +892,13 @@ end;
 
 function TtgClient.ProccessUpdate(u: TtgUpdate): Boolean;
 begin
-  Result := False;
   for var Subscriber in FSubscribers do
-  begin
-    if Subscriber.ConditionText.IsEmpty then
-    begin
-      if Subscriber.Func(u) then
-        Exit(True);
-    end
-    else
-    begin
-      if Assigned(u.Message) and (u.Message.Text.Trim = Subscriber.ConditionText) then
-        if Subscriber.Func(u) then
-          Exit(True);
-    end;
-  end;
+    if Subscriber.Executed(u) then
+      Exit(True);
+  for var Subscriber in FCallBackSubscribers do
+    if Subscriber.Executed(u) then
+      Exit(True);
+  Result := False;
 end;
 
 procedure TtgClient.Polling(Proc: TtgUpdateProc);
@@ -1186,10 +1238,47 @@ end;
 
 { TtgUpdateSubscriber }
 
-class function TtgUpdateSubscriber.Create(Func: TtgUpdateFunc; const ConditionText: string): TtgUpdateSubscriber;
+class function TtgUpdateSubscriber.Create(Func: TtgUpdateFunc; const ConditionText: TArray<string>): TtgUpdateSubscriber;
 begin
+  Result.FuncItem := nil;
   Result.Func := Func;
   Result.ConditionText := ConditionText;
+end;
+
+class function TtgUpdateSubscriber.Create(Func: TtgUpdateFuncitem; const ConditionText: TArray<string>): TtgUpdateSubscriber;
+begin
+  Result.Func := nil;
+  Result.FuncItem := Func;
+  Result.ConditionText := ConditionText;
+end;
+
+function TtgUpdateSubscriber.Executed(u: TtgUpdate): Boolean;
+begin
+  Result := False;
+  if Assigned(Func) then
+  begin
+    if ConditionText.IsEmpty or (Assigned(u.Message) and ConditionText.Contains(u.Message.Text.Trim)) then
+      Exit(Func(u));
+  end
+  else
+  begin
+    if not Assigned(u.Message) then
+      Exit;
+    if ConditionText.IsEmpty then
+    begin
+      var Item := u.Message.Text.Trim;
+      Exit(FuncItem(u, Item));
+    end
+    else
+    begin
+      for var ConditiionItem in ConditionText do
+        if u.Message.Text.StartsWith(ConditiionItem + ' ') then
+        begin
+          var Item := u.Message.Text.Replace(ConditiionItem + ' ', '');
+          Exit(FuncItem(u, Item));
+        end;
+    end;
+  end;
 end;
 
 { TtgException }
@@ -1204,6 +1293,29 @@ procedure TtgException.SetCode(const Value: Int64);
 begin
   FCode := Value;
 end;
+
+{ TtgCallbackSubscriber }
+
+class function TtgCallbackSubscriber.Create(Func: TtgUpdateFunc; const PayloadText: TArray<string>): TtgCallbackSubscriber;
+begin
+  Result.Func := Func;
+  Result.PayloadText := PayloadText;
+end;
+
+function TtgCallbackSubscriber.Executed(u: TtgUpdate): Boolean;
+begin
+  Result := False;
+  if Assigned(Func) and Assigned(u.CallbackQuery) then
+  begin
+    if PayloadText.Contains(u.CallbackQuery.Data.Trim) then
+      Exit(Func(u));
+  end;
+end;
+
+initialization
+  {$IFDEF DEBUG}
+  ReportMemoryLeaksOnShutdown := True;
+  {$ENDIF}
 
 end.
 

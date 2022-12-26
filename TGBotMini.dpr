@@ -2,15 +2,13 @@
 
 uses
   System.SysUtils,
-  System.Classes,
   TgBotApi in 'TgBotApi.pas',
   TgBotApi.Client in 'TgBotApi.Client.pas',
+  HGM.ArrayHelpers in 'ArrayHelpers\HGM.ArrayHelpers.pas',
   HGM.JSONParams in 'JSONParam\HGM.JSONParams.pas',
-  TgBotProc.Test in 'TgBotProc.Test.pas',
-  HGM.ArrayHelpers in 'ArrayHelpers\HGM.ArrayHelpers.pas';
+  TgBotProc.Test in 'TgBotProc.Test.pas';
 
 begin
-  ReportMemoryLeaksOnShutdown := True;
   Client := TtgClient.Create({$INCLUDE BOT_TOKEN.key});
   Client.Logging := True;
   Client.OnTextOut :=
@@ -25,8 +23,11 @@ begin
   Client.Subscribe(ProcMenu, '/menu');
   Client.Subscribe(ProcStart, '/start');
   Client.Subscribe(ProcInfo, '/info');
-  Client.Subscribe(ProcA, 'А?');
+  Client.Subscribe(ProcA, ['А?', 'а']);
   Client.Subscribe(ProcPhoto, '/photo');
+
+  Client.SubscribeCallBack(ProcWeather, '{"cmd":"weather"}');
+  Client.SubscribeCallBack(ProcFood, '{"cmd":"food"}');
   while True do
   try
     Client.Hello;

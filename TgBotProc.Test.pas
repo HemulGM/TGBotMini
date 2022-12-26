@@ -5,35 +5,23 @@ interface
 uses
   System.SysUtils, TgBotApi, TgBotApi.Client;
 
-[TTgUpdateSubscribe]
-
 function ProcMenu(u: TtgUpdate): Boolean;
-
-[TTgUpdateSubscribe]
 
 function ProcStart(u: TtgUpdate): Boolean;
 
-[TTgUpdateSubscribe]
-
 function ProcInfo(u: TtgUpdate): Boolean;
-
-[TTgUpdateSubscribe]
 
 function ProcA(u: TtgUpdate): Boolean;
 
-[TTgUpdateSubscribe]
-
 function ProcPhoto(u: TtgUpdate): Boolean;
 
-[TTgUpdateSubscribe]
+function ProcWeather(u: TtgUpdate): Boolean;
+
+function ProcFood(u: TtgUpdate): Boolean;
 
 function ProcCallbackQuery(u: TtgUpdate): Boolean;
 
-[TTgUpdateSubscribe]
-
 function UploadAllFiles(u: TtgUpdate): Boolean;
-
-[TTgUpdateSubscribe]
 
 function Logging(u: TtgUpdate): Boolean;
 
@@ -90,6 +78,18 @@ begin
   end;
 end;
 
+function ProcWeather(u: TtgUpdate): Boolean;
+begin
+  Result := True;
+  Client.SendMessageToChat(u.CallbackQuery.Message.Chat.Id, 'Погода збс!').Free;
+end;
+
+function ProcFood(u: TtgUpdate): Boolean;
+begin
+  Result := True;
+  Client.SendMessageToChat(u.CallbackQuery.Message.Chat.Id, 'Еда норм!').Free;
+end;
+
 function Logging(u: TtgUpdate): Boolean;
 begin
   Result := False;
@@ -124,10 +124,10 @@ end;
 function ProcMenu(u: TtgUpdate): Boolean;
 begin
   Result := False;
-  var KeyBoard := TtgInlineKeyboardMarkup.Create([
-    [['🌦️ Погода', 'command1'], ['🥐 Еда', 'command2']],
-    [['3', 'command3'], ['4', 'command4']]]);
-  Client.SendMessageToChat(u.Message.Chat.Id, 'Меню', KeyBoard.ToString(True)).Free;
+  Client.SendMessageToChat(u.Message.Chat.Id, 'Меню',
+    TtgInlineKeyboardMarkup.Create([
+    [['🌦️ Погода', '{"cmd":"weather"}'], ['🥐 Еда', '{"cmd":"food"}']],
+    [['3', '{"cmd":"command3"}'], ['4', '{"cmd":"command4"}']]]).ToString(True)).Free;
 end;
 
 function ProcStart(u: TtgUpdate): Boolean;
