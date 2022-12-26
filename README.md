@@ -6,42 +6,35 @@ program TGBotMini;
 
 uses
   System.SysUtils,
-  System.Classes,
   TgBotApi in 'TgBotApi.pas',
-  HGM.JSONParams in 'JSONParam\HGM.JSONParams.pas',
+  TgBotApi.Client in 'TgBotApi.Client.pas',
   HGM.ArrayHelpers in 'ArrayHelpers\HGM.ArrayHelpers.pas',
-  TgBotProc.Test in 'TgBotProc.Test.pas',
-  TgBotApi.Client in 'TgBotApi.Client.pas';
+  HGM.JSONParams in 'JSONParam\HGM.JSONParams.pas',
+  TgBotProc.Test in 'TgBotProc.Test.pas';
 
 begin
-  ReportMemoryLeaksOnShutdown := True;
   Client := TtgClient.Create({$INCLUDE BOT_TOKEN.key});
-  Client.Hello;
-  //LongPoll
+  Client.Logging := True;
+  Client.OnTextOut :=
+    procedure(const Text: string)
+    begin
+      Writeln(Text);
+    end;
+  Client.Subscribe(ProcCallbackQuery);
+  Client.Subscribe(ProcMenu, '/menu');
+  Client.Subscribe(ProcStart, '/start');
+  Client.Subscribe(ProcPhoto, '/photo');
   while True do
   try
-    Client.Polling(
-      procedure(u: TtgUpdate)
-      begin
-        Writeln('Data: ', u.ToString);                                  // DEBUG
-        ProcCallbackQuery(u);
-        if Assigned(u.Message) and Assigned(u.Message.Chat) then
-        begin
-          if u.Message.Text = '/menu' then
-            ProcMenu(u)
-          else if u.Message.Text = '/start' then
-            ProcStart(u)
-          else if u.Message.Text = '/info' then
-            ProcInfo(u)
-          else if u.Message.Text = 'А?' then
-            ProcA(u)
-          else if u.Message.Text = '/photo' then
-            ProcPhoto(u);
-        end;
-      end);
+    Client.Hello;
+    Client.Polling;
   except
     on E: Exception do
+    begin
       Writeln('Error: ' + E.Message);
+      Sleep(5000);
+    end;
   end;
+  Client.Free;
 end.
 ```
