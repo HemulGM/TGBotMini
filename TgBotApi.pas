@@ -548,7 +548,8 @@ type
     //
     procedure GetFile(const FileId: string; Stream: TStream);
     //
-    procedure Polling(Proc: TtgUpdateProc = nil); overload;
+    procedure Polling; overload;
+    procedure Polling(Proc: TtgUpdateProc); overload;
     procedure StopPolling;
     procedure Hello;
     //
@@ -888,6 +889,11 @@ begin
   Result := Execute<TtgUpdates>('getUpdates', Params.ToString(True));
   if Length(Result.Result) > 0 then
     FLastUpdateId := Result.Result[High(Result.Result)].UpdateId + 1;
+end;
+
+procedure TtgClient.Polling;
+begin
+  Polling(nil);
 end;
 
 function TtgClient.ProccessUpdate(u: TtgUpdate): Boolean;

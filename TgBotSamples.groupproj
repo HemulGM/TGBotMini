@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{46397787-BE88-4332-9742-7C1054AF2567}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="TGBotMini.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WithGUI\TgBotGUI.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="TGBotMini">
+        <MSBuild Projects="TGBotMini.dproj"/>
+    </Target>
+    <Target Name="TGBotMini:Clean">
+        <MSBuild Projects="TGBotMini.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TGBotMini:Make">
+        <MSBuild Projects="TGBotMini.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TgBotGUI">
+        <MSBuild Projects="WithGUI\TgBotGUI.dproj"/>
+    </Target>
+    <Target Name="TgBotGUI:Clean">
+        <MSBuild Projects="WithGUI\TgBotGUI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TgBotGUI:Make">
+        <MSBuild Projects="WithGUI\TgBotGUI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="TGBotMini;TgBotGUI"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="TGBotMini:Clean;TgBotGUI:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="TGBotMini:Make;TgBotGUI:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
