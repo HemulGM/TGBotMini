@@ -13,7 +13,7 @@ uses
   TgBotProc.Test in 'TgBotProc.Test.pas';
 
 begin
-  Client := TtgClient.Create({$INCLUDE BOT_TOKEN.key});
+  Client := TtgClient.Create({$INCLUDE BOT_TOKEN.key});6002507169:AAGQHx7NT4Mkvdpaw3DBbbCcry8n7IW3KgQ
   Client.Logging := True;
   Client.OnTextOut :=
     procedure(const Text: string)
