@@ -542,6 +542,8 @@ type
     function SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = ''): TtgMessageResponse;
     function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse; overload;
     function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse; overload;
+    function SendVideoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse; overload;
+    function SendVideoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse; overload;
     function SendPoll(Params: TtgPollParams): TtgMessageResponse;
     function SendAudio(Params: TtgAudioParams): TtgMessageResponse;
     procedure DeleteMessage(ChatId: Int64; MessageId: Int64);
@@ -629,16 +631,6 @@ begin
   Result := Execute<TtgMessageResponse>('sendMessage', Message.ToString(True));
 end;
 
-function TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse;
-begin
-  var Stream := TFileStream.Create(FileName, fmShareDenyWrite);
-  try
-    Result := SendPhotoToChat(ChatId, Caption, FileName, Stream);
-  finally
-    Stream.Free;
-  end;
-end;
-
 procedure TtgClient.DoError(Response: TStringStream; StatusCode: Integer);
 begin
   var ErrorText := 'Unknown error';
@@ -663,6 +655,16 @@ begin
   raise TtgException.Create(ErrorCode, ErrorText);
 end;
 
+function TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse;
+begin
+  var Stream := TFileStream.Create(FileName, fmShareDenyWrite);
+  try
+    Result := SendPhotoToChat(ChatId, Caption, FileName, Stream);
+  finally
+    Stream.Free;
+  end;
+end;
+
 function TtgClient.SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse;
 var
   Form: TMultipartFormData;
@@ -680,6 +682,30 @@ end;
 function TtgClient.SendPoll(Params: TtgPollParams): TtgMessageResponse;
 begin
   Result := Execute<TtgMessageResponse>('sendPoll', Params.ToJsonString);
+end;
+
+function TtgClient.SendVideoToChat(ChatId: Int64; const Caption, FileName: string; Stream: TStream): TtgMessageResponse;
+var
+  Form: TMultipartFormData;
+begin
+  Form := TMultipartFormData.Create;
+  try
+    Form.AddStream('video', Stream, FileName);
+    Result := Execute<TtgMessageResponse>(
+      Format('sendVideo?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
+  finally
+    Form.Free;
+  end;
+end;
+
+function TtgClient.SendVideoToChat(ChatId: Int64; const Caption, FileName: string): TtgMessageResponse;
+begin
+  var Stream := TFileStream.Create(FileName, fmShareDenyWrite);
+  try
+    Result := SendVideoToChat(ChatId, Caption, FileName, Stream);
+  finally
+    Stream.Free;
+  end;
 end;
 
 procedure TtgClient.SetLogging(const Value: Boolean);

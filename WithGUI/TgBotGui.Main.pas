@@ -46,7 +46,13 @@ begin
   Client.SubscribeCallBack(
     function(u: TtgUpdate): Boolean
     begin
-      Client.SendMessageToChat(u.CallbackQuery.Message.Chat.Id, 'Погода так себе');
+
+      var Response := Client.SendMessageToChat(u.CallbackQuery.Message.Chat.Id, 'Погода так себе');
+      try
+        var MsgId := Response.Result.MessageId;
+      finally
+        Response.Free;
+      end;
       Result := True;
     end, '{"cmd":"weather"}');
   Client.Subscribe(

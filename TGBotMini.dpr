@@ -25,6 +25,7 @@ begin
   Client.Subscribe(ProcInfo, '/info');
   Client.Subscribe(ProcA, ['А?', 'а']);
   Client.Subscribe(ProcPhoto, '/photo');
+  Client.Subscribe(ProcVideo, '/video');
 
   Client.SubscribeCallBack(ProcWeather, '{"cmd":"weather"}');
   Client.SubscribeCallBack(ProcFood, '{"cmd":"food"}');

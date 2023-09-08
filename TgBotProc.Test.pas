@@ -15,6 +15,8 @@ function ProcA(u: TtgUpdate): Boolean;
 
 function ProcPhoto(u: TtgUpdate): Boolean;
 
+function ProcVideo(u: TtgUpdate): Boolean;
+
 function ProcWeather(u: TtgUpdate): Boolean;
 
 function ProcFood(u: TtgUpdate): Boolean;
@@ -156,6 +158,12 @@ function ProcPhoto(u: TtgUpdate): Boolean;
 begin
   Result := False;
   Client.SendPhotoToChat(u.Message.Chat.Id, 'Фото', 'D:\Temp\Iconion\HGM\Material Icons_e80e(0)_1024_Fill.png').Free;
+end;
+
+function ProcVideo(u: TtgUpdate): Boolean;
+begin
+  Result := False;
+  Client.SendVideoToChat(u.Message.Chat.Id, 'Видео', 'D:\Downloads\Telegram Desktop\IMG_7719.MP4').Free;
 end;
 
 function ProcCallbackQuery(u: TtgUpdate): Boolean;
