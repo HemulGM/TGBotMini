@@ -476,9 +476,38 @@ type
     function ToString: string;
   end;
 
-  TtgPollParams = class(TJSONParam)
-    function ChatId(const Value: string): TtgPollParams; overload;
-    function ChatId(const Value: Int64): TtgPollParams; overload;
+  TtgAttachmentParams = class(TJSONParam)
+    /// <summary>
+    /// Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+    /// </summary>
+    function ChatId(const Value: string): TtgAttachmentParams; overload;
+    /// <summary>
+    /// Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+    /// </summary>
+    function ChatId(const Value: Int64): TtgAttachmentParams; overload;
+    /// <summary>
+    /// Unique identifier for the target message thread (topic) of the forum; for forum supergroups only
+    /// </summary>
+    function MessageThreadId(const Value: Int64): TtgAttachmentParams; overload;
+    /// <summary>
+    /// Sends messages silently. Users will receive a notification with no sound.
+    /// </summary>
+    function DisableNotification(const Value: Boolean): TtgAttachmentParams; overload;
+    /// <summary>
+    /// Protects the contents of the sent messages from forwarding and saving
+    /// </summary>
+    function ProtectContent(const Value: Boolean): TtgAttachmentParams; overload;
+    /// <summary>
+    /// If the messages are a reply, ID of the original message
+    /// </summary>
+    function ReplyToMessageId(const Value: Int64): TtgAttachmentParams; overload;
+    /// <summary>
+    /// Pass True if the message should be sent even if the specified replied-to message is not found
+    /// </summary>
+    function AllowSendingWithoutReply(const Value: Boolean): TtgAttachmentParams; overload;
+  end;
+
+  TtgPollParams = class(TtgAttachmentParams)
     function Question(const Value: string): TtgPollParams;
     function Options(const Value: TArray<string>): TtgPollParams;
     function IsNotAnonymous(const Value: Boolean = True): TtgPollParams;
@@ -486,10 +515,15 @@ type
     function OpenPeriod(const Value: Word): TtgPollParams; overload;
   end;
 
-  TtgAudioParams = class(TJSONParam)
-    function ChatId(const Value: string): TtgAudioParams; overload;
-    function ChatId(const Value: Int64): TtgAudioParams; overload;
+  TtgAudioParams = class(TtgAttachmentParams)
     function Audio(const Url: string): TtgAudioParams; overload;
+  end;
+
+  TtgContactParams = class(TtgAttachmentParams)
+    function PhoneNumber(const Value: string): TtgContactParams; overload;
+    function FirstName(const Value: string): TtgContactParams; overload;
+    function LastName(const Value: string): TtgContactParams; overload;
+    function VCard(const Value: string): TtgContactParams; overload;
   end;
 
   TtgUpdateSubscriber = record
@@ -545,6 +579,7 @@ type
     function SendVideoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse; overload;
     function SendVideoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse; overload;
     function SendPoll(Params: TtgPollParams): TtgMessageResponse;
+    function SendContact(Params: TtgContactParams): TtgMessageResponse;
     function SendAudio(Params: TtgAudioParams): TtgMessageResponse;
     procedure DeleteMessage(ChatId: Int64; MessageId: Int64);
     //
@@ -619,6 +654,11 @@ end;
 function TtgClient.SendAudio(Params: TtgAudioParams): TtgMessageResponse;
 begin
   Result := Execute<TtgMessageResponse>('sendAudio', Params.ToJsonString);
+end;
+
+function TtgClient.SendContact(Params: TtgContactParams): TtgMessageResponse;
+begin
+  Result := Execute<TtgMessageResponse>('sendContact', Params.ToJsonString);
 end;
 
 function TtgClient.SendMessageToChat(ChatId: Int64; const Text, KeyBoard: string): TtgMessageResponse;
@@ -1189,18 +1229,6 @@ begin
   Add('type', Value.ToString);
 end;
 
-function TtgPollParams.ChatId(const Value: string): TtgPollParams;
-begin
-  Result := Self;
-  Add('chat_id', Value);
-end;
-
-function TtgPollParams.ChatId(const Value: Int64): TtgPollParams;
-begin
-  Result := Self;
-  Add('chat_id', Value);
-end;
-
 function TtgPollParams.IsNotAnonymous(const Value: Boolean): TtgPollParams;
 begin
   Result := Self;
@@ -1245,18 +1273,6 @@ function TtgAudioParams.Audio(const Url: string): TtgAudioParams;
 begin
   Result := Self;
   Add('audio', Url);
-end;
-
-function TtgAudioParams.ChatId(const Value: string): TtgAudioParams;
-begin
-  Result := Self;
-  Add('chat_id', Value);
-end;
-
-function TtgAudioParams.ChatId(const Value: Int64): TtgAudioParams;
-begin
-  Result := Self;
-  Add('chat_id', Value);
 end;
 
 { TtgPollAnswer }
@@ -1342,6 +1358,76 @@ begin
     if PayloadText.Contains(u.CallbackQuery.Data.Trim) then
       Exit(Func(u));
   end;
+end;
+
+{ TtgContactParams }
+
+function TtgContactParams.FirstName(const Value: string): TtgContactParams;
+begin
+  Result := Self;
+  Add('first_name', Value);
+end;
+
+function TtgContactParams.LastName(const Value: string): TtgContactParams;
+begin
+  Result := Self;
+  Add('last_name', Value);
+end;
+
+function TtgContactParams.PhoneNumber(const Value: string): TtgContactParams;
+begin
+  Result := Self;
+  Add('phone_number', Value);
+end;
+
+function TtgContactParams.VCard(const Value: string): TtgContactParams;
+begin
+  Result := Self;
+  Add('vcard', Value);
+end;
+
+{ TtgAttachmentParams }
+
+function TtgAttachmentParams.ChatId(const Value: string): TtgAttachmentParams;
+begin
+  Result := Self;
+  Add('chat_id', Value);
+end;
+
+function TtgAttachmentParams.AllowSendingWithoutReply(const Value: Boolean): TtgAttachmentParams;
+begin
+  Result := Self;
+  Add('allow_sending_without_reply', Value);
+end;
+
+function TtgAttachmentParams.ChatId(const Value: Int64): TtgAttachmentParams;
+begin
+  Result := Self;
+  Add('chat_id', Value);
+end;
+
+function TtgAttachmentParams.DisableNotification(const Value: Boolean): TtgAttachmentParams;
+begin
+  Result := Self;
+  Add('disable_notification', Value);
+end;
+
+function TtgAttachmentParams.MessageThreadId(const Value: Int64): TtgAttachmentParams;
+begin
+  Result := Self;
+  Add('message_thread_id', Value);
+end;
+
+function TtgAttachmentParams.ProtectContent(const Value: Boolean): TtgAttachmentParams;
+begin
+  Result := Self;
+  Add('protect_content', Value);
+end;
+
+function TtgAttachmentParams.ReplyToMessageId(const Value: Int64): TtgAttachmentParams;
+begin
+  Result := Self;
+  Add('reply_to_message_id', Value);
 end;
 
 initialization
