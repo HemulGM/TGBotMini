@@ -435,7 +435,14 @@ type
   /// <summary>
   /// Title, Command, Url
   /// </summary>
-  TtgKey = TArray<string>;
+  TtgKey = record
+    Text: string;
+    CallbackData: string;
+    Url: string;
+    RequestContact: Boolean;
+    RequestLocation: Boolean;
+    class function Create(const Text, CallbackData: string; const Url: string = ''; RequestContact: Boolean = False; RequestLocation: Boolean = False): TtgKey; static;
+  end;
 
   TtgKeysArray = TArray<TtgKey>;
 
@@ -456,7 +463,7 @@ type
     FJSON: TJSONObject;
   public
     constructor Create; overload;
-    constructor Create(Keys: TtgKeysArray); overload;
+    constructor Create(Keys: TtgInlineKeysArray); overload;
     destructor Destroy; override;
     function ToString(AutoFree: Boolean = False): string; reintroduce;
   end;
@@ -1096,15 +1103,15 @@ begin
     KB.Add(JSRow);
     for var Button in Row do
     begin
-      if Length(Button) > 1 then
-      begin
-        var JSButton := TJSONObject.Create;
-        JSButton.AddPair('text', Button[0]);
-        JSButton.AddPair('callback_data', Button[1]);
-        if Length(Button) > 2 then
-          JSButton.AddPair('url', Button[2]);
-        JSRow.Add(JSButton);
-      end;
+      var JSButton := TJSONObject.Create;
+      JSButton.AddPair('text', Button.Text);
+      if not Button.CallbackData.IsEmpty then
+        JSButton.AddPair('callback_data', Button.CallbackData);
+      if not Button.Url.IsEmpty then
+        JSButton.AddPair('url', Button.Url);
+      JSButton.AddPair('request_contact', Button.RequestContact);
+      JSButton.AddPair('request_location', Button.RequestLocation);
+      JSRow.Add(JSButton);
     end;
   end;
 end;
@@ -1136,7 +1143,7 @@ begin
   FJSON := TJSONObject.Create;
 end;
 
-constructor TtgReplyKeyboardMarkup.Create(Keys: TtgKeysArray);
+constructor TtgReplyKeyboardMarkup.Create(Keys: TtgInlineKeysArray);
 begin
   Create;
   var KB := TJSONArray.Create;
@@ -1148,7 +1155,11 @@ begin
     for var Button in Row do
     begin
       var JSButton := TJSONObject.Create;
-      JSButton.AddPair('text', Button);
+      JSButton.AddPair('text', Button.Text);
+      JSButton.AddPair('callback_data', Button.CallbackData);
+      JSButton.AddPair('url', Button.Url);
+      JSButton.AddPair('request_contact', Button.RequestContact);
+      JSButton.AddPair('request_location', Button.RequestLocation);
       JSRow.Add(JSButton);
     end;
   end;
@@ -1428,6 +1439,17 @@ function TtgAttachmentParams.ReplyToMessageId(const Value: Int64): TtgAttachment
 begin
   Result := Self;
   Add('reply_to_message_id', Value);
+end;
+
+{ TtgKey }
+
+class function TtgKey.Create(const Text, CallbackData, Url: string; RequestContact, RequestLocation: Boolean): TtgKey;
+begin
+  Result.Text := Text;
+  Result.CallbackData := CallbackData;
+  Result.Url := Url;
+  Result.RequestContact := RequestContact;
+  Result.RequestLocation := RequestLocation;
 end;
 
 initialization

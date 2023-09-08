@@ -130,16 +130,16 @@ begin
   Result := False;
   Client.SendMessageToChat(u.Message.Chat.Id, 'Меню',
     TtgInlineKeyboardMarkup.Create([
-    [['🌦️ Погода', '{"cmd":"weather"}'], ['🥐 Еда', '{"cmd":"food"}']],
-    [['3', '{"cmd":"command3"}'], ['4', '{"cmd":"command4"}']]]).ToString(True)).Free;
+    [TtgKey.Create('🌦️ Погода', '{"cmd":"weather"}'), TtgKey.Create('🥐 Еда', '{"cmd":"food"}')],
+    [TtgKey.Create('3', '{"cmd":"command3"}'), TtgKey.Create('Contact', '{"cmd":"command4"}', '', True)]]).ToString(True)).Free;
 end;
 
 function ProcStart(u: TtgUpdate): Boolean;
 begin
   Result := False;
   var KeyBoard := TtgReplyKeyboardMarkup.Create([
-    ['1', '2'],
-    ['3', '/info']
+    [TtgKey.Create('1', ''), TtgKey.Create('2', '', '', True)],
+    [TtgKey.Create('3', ''), TtgKey.Create('/info', '')]
     ]);
   Client.SendMessageToChat(u.Message.Chat.Id, 'Меню 2', KeyBoard.ToString(True)).Free;
 end;
