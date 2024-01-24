@@ -34,9 +34,14 @@ type
     FChat_id: int64;
     FText: string;
     FReply_markup: string;
+    FParse_mode: string;
   public
     property ChatId: int64 read FChat_id write FChat_id;
     property Text: string read FText write FText;
+    /// <summary>
+    /// Markdown, HTML, MarkdownV2
+    /// </summary>
+    property ParseMode: string read FParse_mode write FParse_mode;
     property ReplyMarkup: string read FReply_markup write FReply_markup;
   end;
 
@@ -777,7 +782,10 @@ end;
 
 procedure TtgClient.Subscribe(Func: TtgUpdateFuncItem; const Text: string);
 begin
-  Subscribe(Func, [Text]);
+  if Text.IsEmpty then
+    Subscribe(Func, [])
+  else
+    Subscribe(Func, [Text]);
 end;
 
 procedure TtgClient.SubscribeCallBack(Func: TtgUpdateFunc; const Payload: TArray<string>);
@@ -792,7 +800,10 @@ end;
 
 procedure TtgClient.Subscribe(Func: TtgUpdateFunc; const Text: string);
 begin
-  Subscribe(Func, [Text]);
+  if Text.IsEmpty then
+    Subscribe(Func, [])
+  else
+    Subscribe(Func, [Text]);
 end;
 
 procedure TtgClient.DoTextOut(const Text: string);

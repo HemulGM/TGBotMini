@@ -19,6 +19,8 @@ function ProcVideo(u: TtgUpdate): Boolean;
 
 function ProcContact(u: TtgUpdate): Boolean;
 
+function ProcTest(u: TtgUpdate): Boolean;
+
 function ProcWeather(u: TtgUpdate): Boolean;
 
 function ProcFood(u: TtgUpdate): Boolean;
@@ -138,7 +140,7 @@ function ProcStart(u: TtgUpdate): Boolean;
 begin
   Result := False;
   var KeyBoard := TtgReplyKeyboardMarkup.Create([
-    [TtgKey.Create('1', ''), TtgKey.Create('2', '', '', True)],
+    [TtgKey.Create('1', ''), TtgKey.Create('2', '', '')],
     [TtgKey.Create('3', ''), TtgKey.Create('/info', '')]
     ]);
   Client.SendMessageToChat(u.Message.Chat.Id, 'Меню 2', KeyBoard.ToString(True)).Free;
@@ -154,6 +156,16 @@ function ProcA(u: TtgUpdate): Boolean;
 begin
   Result := False;
   Client.SendMessageToChat(u.Message.Chat.Id, 'Не Ааа!').Free;
+end;
+
+function ProcTest(u: TtgUpdate): Boolean;
+begin
+  Result := False;
+  var Message := TtgMessageNew.Create;
+  Message.ChatId := u.Message.Chat.Id;
+  Message.Text := '`code'#13#10'line 2'#13#10'line3`';
+  Message.ParseMode := 'MarkdownV2';
+  Client.Execute<TtgMessageResponse>('sendMessage', Message.ToString(True)).Free;
 end;
 
 function ProcPhoto(u: TtgUpdate): Boolean;
