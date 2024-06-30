@@ -39,8 +39,8 @@ begin
     begin
       Client.SendMessageToChat(u.Message.Chat.Id, 'Menu',
         TtgInlineKeyboardMarkup.Create([
-        [['🌦️ Погода', '{"cmd":"weather"}'], ['🥐 Еда', '{"cmd":"food"}']],
-        [['3', '{"cmd":"command3"}'], ['4', '{"cmd":"command4"}']]]).ToString(True)).Free;
+        [TtgKey.Create('🌦️ Погода', '{"cmd":"weather"}'), TtgKey.Create('🥐 Еда', '{"cmd":"food"}')],
+        [TtgKey.Create('3', '{"cmd":"command3"}'), TtgKey.Create('Contact', '{"cmd":"command4"}', '', True)]]).ToString(True)).Free;
       Result := True;
     end, '/menu');
   Client.SubscribeCallBack(
