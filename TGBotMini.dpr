@@ -31,6 +31,7 @@ begin
 
   Client.SubscribeCallBack(ProcWeather, '{"cmd":"weather"}');
   Client.SubscribeCallBack(ProcFood, '{"cmd":"food"}');
+
   while True do
   try
     Client.Hello;

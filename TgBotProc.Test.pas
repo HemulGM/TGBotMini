@@ -141,7 +141,7 @@ begin
   Result := False;
   var KeyBoard := TtgReplyKeyboardMarkup.Create([
     [TtgKey.Create('1', ''), TtgKey.Create('2', '', '')],
-    [TtgKey.Create('3', ''), TtgKey.Create('/info', '')]
+    [TtgKey.Create('3', ''), TtgKey.Create('/info', '{ "test": 123 }')]
     ]);
   Client.SendMessageToChat(u.Message.Chat.Id, 'Меню 2', KeyBoard.ToString(True)).Free;
 end;
@@ -203,6 +203,14 @@ begin
     Assigned(u.CallbackQuery.Message.Chat)
     then
   begin
+    var Params := TtgAnswerCallbackParams.Create;
+    try
+      Params.CallbackQueryId(u.CallbackQuery.Id.ToString);
+      Params.Text('Вы выбрали ' + u.CallbackQuery.Data);
+      Client.AnswerCallbackQuery(Params);
+    finally
+      Params.Free;
+    end;
     Client.SendMessageToChat(u.CallbackQuery.Message.Chat.Id, 'Вы выбрали ' + u.CallbackQuery.Data).Free;
   end;
 end;

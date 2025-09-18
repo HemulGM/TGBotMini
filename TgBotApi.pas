@@ -523,7 +523,7 @@ type
     function Question(const Value: string): TtgPollParams;
     function Options(const Value: TArray<string>): TtgPollParams;
     function IsNotAnonymous(const Value: Boolean = True): TtgPollParams;
-    function &Type(const Value: TtgPollType): TtgPollParams;
+    function  &Type(const Value: TtgPollType): TtgPollParams;
     function OpenPeriod(const Value: Word): TtgPollParams; overload;
   end;
 
@@ -536,6 +536,42 @@ type
     function FirstName(const Value: string): TtgContactParams; overload;
     function LastName(const Value: string): TtgContactParams; overload;
     function VCard(const Value: string): TtgContactParams; overload;
+  end;
+
+  TtgInputMediaParam = class(TtgAttachmentParams)
+    //function FileId(const Value: string): TtgInputMediaParam; overload;
+    //function Url(const Value: string): TtgInputMediaParam; overload;
+    //function FileName(const Value: string): TtgInputMediaParam; overload;
+  end;
+
+  TtgInputMediaParamPhoto = class(TtgInputMediaParam)
+  end;
+
+  TtgAnswerCallbackParams = class(TJSONParam)
+    /// <summary>
+    /// Unique identifier for the query to be answered
+    /// </summary>
+    function CallbackQueryId(const Value: string): TtgAnswerCallbackParams;
+    /// <summary>
+    /// Text of the notification. If not specified, nothing will be shown to the user, 0-200 characters
+    /// </summary>
+    function Text(const Value: string): TtgAnswerCallbackParams;
+    /// <summary>
+    /// If True, an alert will be shown by the client instead of a notification at the top of the chat screen. Defaults to false.
+    /// </summary>
+    function ShowAlert(const Value: Boolean): TtgAnswerCallbackParams;
+    /// <summary>
+    /// URL that will be opened by the user's client. If you have created a Game and accepted the conditions via @BotFather,
+    /// specify the URL that opens your game - note that this will only work if the query comes from a callback_game button.
+    ///
+    /// Otherwise, you may use links like t.me/your_bot?start=XXXX that open your bot with a parameter.
+    /// </summary>
+    function Url(const Value: string): TtgAnswerCallbackParams;
+    /// <summary>
+    /// The maximum amount of time in seconds that the result of the callback query may be cached client-side.
+    /// Telegram apps will support caching starting in version 3.14. Defaults to 0.
+    /// </summary>
+    function CacheTime(const Value: Int64): TtgAnswerCallbackParams;
   end;
 
   TtgUpdateSubscriber = record
@@ -594,6 +630,8 @@ type
     function SendContact(Params: TtgContactParams): TtgMessageResponse;
     function SendAudio(Params: TtgAudioParams): TtgMessageResponse;
     procedure DeleteMessage(ChatId: Int64; MessageId: Int64);
+    function SendMediaGroup(ChatId: Int64; Media: TArray<TtgInputMediaParam>): TtgMessageResponse;
+    function AnswerCallbackQuery(Params: TtgAnswerCallbackParams): TtgResponseSimple<Boolean>;
     //
     procedure GetFile(const FileId: string; Stream: TStream);
     //
@@ -673,6 +711,17 @@ begin
   Result := Execute<TtgMessageResponse>('sendContact', Params.ToJsonString);
 end;
 
+function TtgClient.AnswerCallbackQuery(Params: TtgAnswerCallbackParams): TtgResponseSimple<Boolean>;
+begin
+  Result := Execute<TtgResponseSimple<Boolean>>('answerCallbackQuery', Params.ToJsonString);
+end;
+
+function TtgClient.SendMediaGroup(ChatId: Int64; Media: TArray<TtgInputMediaParam>): TtgMessageResponse;
+begin
+  // to do
+  Result := nil;
+end;
+
 function TtgClient.SendMessageToChat(ChatId: Int64; const Text, KeyBoard: string): TtgMessageResponse;
 begin
   var Message := TtgMessageNew.Create;
@@ -723,9 +772,9 @@ var
 begin
   Form := TMultipartFormData.Create;
   try
-    Form.AddStream('photo', Stream, FileName);
+    Form.AddStream('photo', Stream, True, FileName);
     Result := Execute<TtgMessageResponse>(
-      Format('sendPhoto?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
+        Format('sendPhoto?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
   finally
     Form.Free;
   end;
@@ -742,9 +791,9 @@ var
 begin
   Form := TMultipartFormData.Create;
   try
-    Form.AddStream('video', Stream, FileName);
+    Form.AddStream('video', Stream, True, FileName);
     Result := Execute<TtgMessageResponse>(
-      Format('sendVideo?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
+        Format('sendVideo?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
   finally
     Form.Free;
   end;
@@ -1463,10 +1512,32 @@ begin
   Result.RequestLocation := RequestLocation;
 end;
 
-initialization
-  {$IFDEF DEBUG}
-  ReportMemoryLeaksOnShutdown := True;
-  {$ENDIF}
+{ TtgAnswerCallbackParams }
+
+function TtgAnswerCallbackParams.CacheTime(const Value: Int64): TtgAnswerCallbackParams;
+begin
+  Result := TtgAnswerCallbackParams(Add('cache_time', Value));
+end;
+
+function TtgAnswerCallbackParams.CallbackQueryId(const Value: string): TtgAnswerCallbackParams;
+begin
+  Result := TtgAnswerCallbackParams(Add('callback_query_id', Value));
+end;
+
+function TtgAnswerCallbackParams.ShowAlert(const Value: Boolean): TtgAnswerCallbackParams;
+begin
+  Result := TtgAnswerCallbackParams(Add('show_alert', Value));
+end;
+
+function TtgAnswerCallbackParams.Text(const Value: string): TtgAnswerCallbackParams;
+begin
+  Result := TtgAnswerCallbackParams(Add('text', Value));
+end;
+
+function TtgAnswerCallbackParams.Url(const Value: string): TtgAnswerCallbackParams;
+begin
+  Result := TtgAnswerCallbackParams(Add('url', Value));
+end;
 
 end.
 
