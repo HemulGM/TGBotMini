@@ -155,17 +155,27 @@ end;
 function ProcA(u: TtgUpdate): Boolean;
 begin
   Result := False;
-  Client.SendMessageToChat(u.Message.Chat.Id, 'Не Ааа!').Free;
+  var Message := TtgMessageNew.Create;
+  Message.ChatId(u.Message.Chat.Id);
+  Message.Text('Не Ааа!');
+  var Reply := TtgReplyParametersNew.Create;
+  Reply.MessageId(u.Message.MessageId);
+  Reply.ChatId(u.Message.Chat.Id);
+  Message.ReplyParameters(Reply);
+  Writeln;
+  Writeln(Message.ToJsonString);
+  Writeln;
+  Client.SendMessage(Message).Free;
 end;
 
 function ProcTest(u: TtgUpdate): Boolean;
 begin
   Result := False;
   var Message := TtgMessageNew.Create;
-  Message.ChatId := u.Message.Chat.Id;
-  Message.Text := '`code'#13#10'line 2'#13#10'line3`';
-  Message.ParseMode := 'MarkdownV2';
-  Client.Execute<TtgMessageResponse>('sendMessage', Message.ToString(True)).Free;
+  Message.ChatId(u.Message.Chat.Id);
+  Message.Text('`code'#13#10'line 2'#13#10'line3`');
+  Message.ParseMode('MarkdownV2');
+  Client.Execute<TtgMessageResponse>('sendMessage', Message.ToJsonString(True)).Free;
 end;
 
 function ProcPhoto(u: TtgUpdate): Boolean;

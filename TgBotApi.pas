@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, System.Json, REST.Json, System.Net.HttpClient,
   REST.JsonReflect, REST.Json.Interceptors, HGM.JSONParams,
-  System.Generics.Collections, System.Net.Mime;
+  System.Generics.Collections, System.Net.Mime, System.Rtti;
 
 {$SCOPEDENUMS ON}
 
@@ -29,20 +29,108 @@ type
     function ToString(AutoFree: Boolean = False): string; reintroduce;
   end;
 
-  TtgMessageNew = class(TtgObject)
-  private
-    FChat_id: int64;
-    FText: string;
-    FReply_markup: string;
-    FParse_mode: string;
+  TtgReplyParametersNew = class(TJSONParam)
   public
-    property ChatId: int64 read FChat_id write FChat_id;
-    property Text: string read FText write FText;
     /// <summary>
-    /// Markdown, HTML, MarkdownV2
+    /// Identifier of the message that will be replied to in the current chat, or in the chat chat_id if it is specified
     /// </summary>
-    property ParseMode: string read FParse_mode write FParse_mode;
-    property ReplyMarkup: string read FReply_markup write FReply_markup;
+    function MessageId(const Value: Int64): TtgReplyParametersNew;
+    /// <summary>
+    /// Optional. If the message to be replied to is from a different chat, unique identifier for the chat or username of the channel (in the format @channelusername). Not supported for messages sent on behalf of a business account and messages from channel direct messages chats.
+    /// </summary>
+    function ChatId(const Value: Int64): TtgReplyParametersNew; overload;
+    /// <summary>
+    /// Optional. If the message to be replied to is from a different chat, unique identifier for the chat or username of the channel (in the format @channelusername). Not supported for messages sent on behalf of a business account and messages from channel direct messages chats.
+    /// </summary>
+    function ChatId(const Value: string): TtgReplyParametersNew; overload;
+    /// <summary>
+    /// Optional. Pass True if the message should be sent even if the specified message to be replied to is not found. Always False for replies in another chat or forum topic. Always True for messages sent on behalf of a business account.
+    /// </summary>
+    function AllowSendingWithoutReply(const Value: Boolean): TtgReplyParametersNew;
+    /// <summary>
+    /// Optional. Quoted part of the message to be replied to; 0-1024 characters after entities parsing. The quote must be an exact substring of the message to be replied to, including bold, italic, underline, strikethrough, spoiler, and custom_emoji entities. The message will fail to send if the quote isn't found in the original message.
+    /// </summary>
+    function Quote(const Value: string): TtgReplyParametersNew;
+    /// <summary>
+    /// Optional. Mode for parsing entities in the quote. See formatting options for more details.
+    /// </summary>
+    function QuoteParseMode(const Value: string): TtgReplyParametersNew;
+    /// <summary>
+    /// Optional. A JSON-serialized list of special entities that appear in the quote. It can be specified instead of quote_parse_mode.
+    /// </summary>
+    function QuoteEntities(const Value: TArray<string>): TtgReplyParametersNew;
+    /// <summary>
+    /// Optional. Position of the quote in the original message in UTF-16 code units
+    /// </summary>
+    function QuotePosition(const Value: Int64): TtgReplyParametersNew;
+    /// <summary>
+    /// Optional. Identifier of the specific checklist task to be replied to
+    /// </summary>
+    function ChecklistTaskId(const Value: Int64): TtgReplyParametersNew;
+  end;
+
+  TtgMessageNew = class(TJSONParam)
+  public
+    /// <summary>
+    /// Unique identifier of the business connection on behalf of which the message will be sent
+    /// </summary>
+    function BusinessConnectionId(const Value: string): TtgMessageNew;
+    /// <summary>
+    /// Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+    /// </summary>
+    function ChatId(const Value: Int64): TtgMessageNew; overload;
+    /// <summary>
+    /// Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+    /// </summary>
+    function ChatId(const Value: string): TtgMessageNew; overload;
+    /// <summary>
+    /// Unique identifier for the target message thread (topic) of a forum; for forum supergroups and private chats of bots with forum topic mode enabled only
+    /// </summary>
+    function MessageThreadId(const Value: Int64): TtgMessageNew;
+    /// <summary>
+    /// Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat
+    /// </summary>
+    function DirectMessagesTopicId(const Value: Int64): TtgMessageNew;
+    /// <summary>
+    /// Text of the message to be sent, 1-4096 characters after entities parsing
+    /// </summary>
+    function Text(const Value: string): TtgMessageNew;
+    /// <summary>
+    /// Mode for parsing entities in the message text. See formatting options for more details.
+    /// </summary>
+    function ParseMode(const Value: string): TtgMessageNew;
+    /// <summary>
+    /// A JSON-serialized list of special entities that appear in message text, which can be specified instead of parse_mode
+    /// </summary>
+    function Entities(const Value: TArray<string>): TtgMessageNew;
+    /// <summary>
+    /// Sends the message silently. Users will receive a notification with no sound.
+    /// </summary>
+    function DisableNotification(const Value: Boolean): TtgMessageNew;
+    /// <summary>
+    /// Protects the contents of the sent message from forwarding and saving
+    /// </summary>
+    function ProtectContent(const Value: Boolean): TtgMessageNew;
+    /// <summary>
+    /// Pass True to allow up to 1000 messages per second, ignoring broadcasting limits for a fee of 0.1 Telegram Stars per message. The relevant Stars will be withdrawn from the bot's balance
+    /// </summary>
+    function AllowPaidBroadcast(const Value: Boolean): TtgMessageNew;
+    /// <summary>
+    /// Unique identifier of the message effect to be added to the message; for private chats only
+    /// </summary>
+    function MessageEffectId(const Value: string): TtgMessageNew;
+    /// <summary>
+    /// A JSON-serialized object containing the parameters of the suggested post to send; for direct messages chats only. If the message is sent as a reply to another suggested post, then that suggested post is automatically declined.
+    /// </summary>
+    function SuggestedPostParameters(const Value: string): TtgMessageNew;
+    /// <summary>
+    /// Description of the message to reply to
+    /// </summary>
+    function ReplyParameters(const Value: TtgReplyParametersNew): TtgMessageNew;
+    /// <summary>
+    /// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove a reply keyboard or to force a reply from the user
+    /// </summary>
+    function ReplyMarkup(const Value: string): TtgMessageNew; overload;
   end;
 
   TtgMessageDel = class(TtgObject)
@@ -174,12 +262,14 @@ type
     FMime_type: string;
     FThumb: TtgPhoto;
     FWidth: Int64;
+    FThumbnail: TtgPhoto;
   public
     property Duration: Int64 read FDuration write FDuration;
     property MimeType: string read FMime_type write FMime_type;
     property FileName: string read FFile_name write FFile_name;
     property Height: Int64 read FHeight write FHeight;
     property Thumb: TtgPhoto read FThumb write FThumb;
+    property Thumbnail: TtgPhoto read FThumbnail write FThumbnail;
     property Width: Int64 read FWidth write FWidth;
     destructor Destroy; override;
   end;
@@ -622,6 +712,7 @@ type
     function GetMe: TtgUserResponse;
     function GetUpdates: TtgUpdates;
     function SendMessageToChat(ChatId: Int64; const Text: string; const KeyBoard: string = ''): TtgMessageResponse;
+    function SendMessage(Message: TtgMessageNew): TtgMessageResponse;
     function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse; overload;
     function SendPhotoToChat(ChatId: Int64; const Caption: string; const FileName: string; Stream: TStream): TtgMessageResponse; overload;
     function SendVideoToChat(ChatId: Int64; const Caption: string; const FileName: string): TtgMessageResponse; overload;
@@ -665,8 +756,7 @@ type
 implementation
 
 uses
-  System.NetConsts, System.Net.URLClient, System.NetEncoding, HGM.ArrayHelpers,
-  System.Rtti;
+  System.NetConsts, System.Net.URLClient, System.NetEncoding, HGM.ArrayHelpers;
 
 class procedure TArrayHelp.FreeArrayOfObject<T>(var Target: TArray<T>);
   {$IFNDEF AUTOREFCOUNT}
@@ -722,14 +812,19 @@ begin
   Result := nil;
 end;
 
+function TtgClient.SendMessage(Message: TtgMessageNew): TtgMessageResponse;
+begin
+  Result := Execute<TtgMessageResponse>('sendMessage', Message.ToJsonString(True));
+end;
+
 function TtgClient.SendMessageToChat(ChatId: Int64; const Text, KeyBoard: string): TtgMessageResponse;
 begin
   var Message := TtgMessageNew.Create;
-  Message.ChatId := ChatId;
-  Message.Text := Text;
+  Message.ChatId(ChatId);
+  Message.Text(Text);
   if not KeyBoard.IsEmpty then
-    Message.ReplyMarkup := KeyBoard;
-  Result := Execute<TtgMessageResponse>('sendMessage', Message.ToString(True));
+    Message.ReplyMarkup(KeyBoard);
+  Result := Execute<TtgMessageResponse>('sendMessage', Message.ToJsonString(True));
 end;
 
 procedure TtgClient.DoError(Response: TStringStream; StatusCode: Integer);
@@ -774,7 +869,7 @@ begin
   try
     Form.AddStream('photo', Stream, True, FileName);
     Result := Execute<TtgMessageResponse>(
-        Format('sendPhoto?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
+      Format('sendPhoto?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
   finally
     Form.Free;
   end;
@@ -793,7 +888,7 @@ begin
   try
     Form.AddStream('video', Stream, True, FileName);
     Result := Execute<TtgMessageResponse>(
-        Format('sendVideo?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
+      Format('sendVideo?chat_id=%d&caption=%s', [ChatId, TURLEncoding.URL.Encode(Caption)]), Form);
   finally
     Form.Free;
   end;
@@ -1278,8 +1373,7 @@ end;
 
 destructor TtgSticker.Destroy;
 begin
-  if Assigned(FThumb) then
-    FThumb.Free;
+  FThumb.Free;
   inherited;
 end;
 
@@ -1287,8 +1381,8 @@ end;
 
 destructor TtgVideo.Destroy;
 begin
-  if Assigned(FThumb) then
-    FThumb.Free;
+  FThumb.Free;
+  FThumbnail.Free;
   inherited;
 end;
 
@@ -1537,6 +1631,130 @@ end;
 function TtgAnswerCallbackParams.Url(const Value: string): TtgAnswerCallbackParams;
 begin
   Result := TtgAnswerCallbackParams(Add('url', Value));
+end;
+
+{ TtgMessageNew }
+
+function TtgMessageNew.AllowPaidBroadcast(const Value: Boolean): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('allow_paid_broadcast', Value));
+end;
+
+function TtgMessageNew.BusinessConnectionId(const Value: string): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('business_connection_id', Value));
+end;
+
+function TtgMessageNew.ChatId(const Value: string): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('chat_id', Value));
+end;
+
+function TtgMessageNew.DirectMessagesTopicId(const Value: Int64): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('direct_messages_topic_id', Value));
+end;
+
+function TtgMessageNew.DisableNotification(const Value: Boolean): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('disable_notification', Value));
+end;
+
+function TtgMessageNew.Entities(const Value: TArray<string>): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('entities', Value));
+end;
+
+function TtgMessageNew.MessageEffectId(const Value: string): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('message_effect_id', Value));
+end;
+
+function TtgMessageNew.MessageThreadId(const Value: Int64): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('message_thread_id', Value));
+end;
+
+function TtgMessageNew.ParseMode(const Value: string): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('parse_mode', Value));
+end;
+
+function TtgMessageNew.ProtectContent(const Value: Boolean): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('protect_content', Value));
+end;
+
+function TtgMessageNew.ReplyMarkup(const Value: string): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('reply_markup', Value));
+end;
+
+function TtgMessageNew.ReplyParameters(const Value: TtgReplyParametersNew): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('reply_parameters', Value));
+end;
+
+function TtgMessageNew.SuggestedPostParameters(const Value: string): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('suggested_post_parameters', Value));
+end;
+
+function TtgMessageNew.ChatId(const Value: Int64): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('chat_id', Value));
+end;
+
+function TtgMessageNew.Text(const Value: string): TtgMessageNew;
+begin
+  Result := TtgMessageNew(Add('text', Value));
+end;
+
+{ TtgReplyParametersNew }
+
+function TtgReplyParametersNew.AllowSendingWithoutReply(const Value: Boolean): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('allow_sending_without_reply', Value));
+end;
+
+function TtgReplyParametersNew.ChatId(const Value: string): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('chat_id', Value));
+end;
+
+function TtgReplyParametersNew.ChecklistTaskId(const Value: Int64): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('checklist_task_id', Value));
+end;
+
+function TtgReplyParametersNew.ChatId(const Value: Int64): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('chat_id', Value));
+end;
+
+function TtgReplyParametersNew.MessageId(const Value: Int64): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('message_id', Value));
+end;
+
+function TtgReplyParametersNew.Quote(const Value: string): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('quote', Value));
+end;
+
+function TtgReplyParametersNew.QuoteEntities(const Value: TArray<string>): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('quote_entities', Value));
+end;
+
+function TtgReplyParametersNew.QuoteParseMode(const Value: string): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('quote_parse_mode', Value));
+end;
+
+function TtgReplyParametersNew.QuotePosition(const Value: Int64): TtgReplyParametersNew;
+begin
+  Result := TtgReplyParametersNew(Add('quote_position', Value));
 end;
 
 end.
