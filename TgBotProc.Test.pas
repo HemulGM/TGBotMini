@@ -162,9 +162,6 @@ begin
   Reply.MessageId(u.Message.MessageId);
   Reply.ChatId(u.Message.Chat.Id);
   Message.ReplyParameters(Reply);
-  Writeln;
-  Writeln(Message.ToJsonString);
-  Writeln;
   Client.SendMessage(Message).Free;
 end;
 
